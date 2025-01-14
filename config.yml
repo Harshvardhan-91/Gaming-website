@@ -1,6 +1,13 @@
+title: Your Site Title
+theme: jekyll-theme-primer
+plugins:
+  - jekyll-seo-tag
+  - jekyll-paginate
+  - jekyll-relative-links
+paginate: 5
+
+
 exclude:
   - node_modules
+  - vendor
   - server/node_modules
-  - vendor/bundle
-  - Gemfile.lock
-  - README.md

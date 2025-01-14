@@ -11,7 +11,7 @@ const Home = () => {
       id: 1,
       title: "Valorant Account",
       price: 149.99,
-      image: "/api/placeholder/400/300",
+      image: "https://media.wired.com/photos/5ea0840cb0490300086261e3/master/pass/Cul-Reveal_ReactorA_VALORANT.jpg",
       rating: 4.8,
       level: 150,
       skins: 45,
@@ -21,7 +21,7 @@ const Home = () => {
       id: 2,
       title: "PUBG Elite Pass",
       price: 89.99,
-      image: "/api/placeholder/400/300",
+      image: "https://i.pinimg.com/originals/e2/20/d7/e220d75c93384db915220c92daf07dad.jpg",
       rating: 4.5,
       level: 89,
       skins: 28,
@@ -31,7 +31,7 @@ const Home = () => {
       id: 3,
       title: "CS:GO Inventory",
       price: 299.99,
-      image: "/api/placeholder/400/300",
+      image: "https://pbs.twimg.com/media/D3uLTNJW4AEf5os.jpg:large",
       rating: 5.0,
       level: 210,
       skins: 76,
@@ -43,32 +43,32 @@ const Home = () => {
     {
       name: "FPS Games",
       count: 1234,
-      image: "/api/placeholder/200/200"
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQu80opCs99-wc2zBiUkvQdF8yGsX3MspUwyQ&s"
     },
     {
       name: "Battle Royale",
       count: 856,
-      image: "/api/placeholder/200/200"
+      image: "https://cdn.mos.cms.futurecdn.net/cRFFW6JNXqEtkBA3P2U68m.jpg"
     },
     {
       name: "MOBA",
       count: 654,
-      image: "/api/placeholder/200/200"
+      image: "https://imageio.forbes.com/specials-images/imageserve/65fb05c9fa323af23f667c73/0x0.jpg?format=jpg&height=900&width=1600&fit=bounds"
     },
     {
       name: "RPG",
       count: 987,
-      image: "/api/placeholder/200/200"
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxQgM-3JqmZFZCUo00flP3F-8PR7h2eCs2xQ&s"
     },
     {
       name: "Sports",
       count: 432,
-      image: "/api/placeholder/200/200"
+      image: "https://www.gettyimages.in/gi-resources/images/HomepageCurationTilesUK/2024_12_DECEMBER/premierleague.jpg"
     },
     {
       name: "Strategy",
       count: 345,
-      image: "/api/placeholder/200/200"
+      image: "https://waywardstrategy.com/wp-content/uploads/2015/09/aoe2hd.png?w=1200"
     }
   ];
 
