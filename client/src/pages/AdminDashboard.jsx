@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Users, Package, Flag, Settings, BarChart2, 
-  Search, Filter, MoreVertical, AlertTriangle,
-  Check, X, ExternalLink, TrendingUp, DollarSign,
-  UserPlus
+  Search, Filter, DollarSign, UserPlus, TrendingUp 
 } from 'lucide-react';
 
-const Dashboard = () => {
+const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
-  const [selectedItems, setSelectedItems] = useState([]);
 
-  // Mock data
   const stats = [
     {
       label: 'Total Users',
@@ -42,60 +38,22 @@ const Dashboard = () => {
     }
   ];
 
-  const recentReports = [
-    {
-      id: 1,
-      type: 'listing',
-      title: 'Suspicious Valorant Account',
-      reporter: 'John Doe',
-      date: '2 hours ago',
-      status: 'pending'
-    },
-    {
-      id: 2,
-      type: 'user',
-      title: 'Potential Scammer',
-      reporter: 'Alice Smith',
-      date: '5 hours ago',
-      status: 'investigating'
-    }
-  ];
-
   const recentUsers = [
     {
       id: 1,
-      name: 'James Wilson',
-      email: 'james@example.com',
+      name: 'John Doe',
+      email: 'john@example.com',
       joined: '2024-01-14',
       status: 'active',
       avatar: '/api/placeholder/40/40'
     },
     {
       id: 2,
-      name: 'Sarah Johnson',
-      email: 'sarah@example.com',
+      name: 'Alice Smith',
+      email: 'alice@example.com',
       joined: '2024-01-13',
       status: 'pending',
       avatar: '/api/placeholder/40/40'
-    }
-  ];
-
-  const pendingListings = [
-    {
-      id: 1,
-      title: 'CSGO Rare Skins Account',
-      seller: 'Mark Thompson',
-      price: 299.99,
-      submitted: '2024-01-14',
-      status: 'pending'
-    },
-    {
-      id: 2,
-      title: 'Fortnite OG Account',
-      seller: 'Lisa Anderson',
-      price: 199.99,
-      submitted: '2024-01-13',
-      status: 'pending'
     }
   ];
 
@@ -135,206 +93,96 @@ const Dashboard = () => {
       <div className="p-6">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 
                       to-purple-600 bg-clip-text text-transparent">
-          GameTrade Admin
+          Admin Dashboard
         </h1>
       </div>
       
       <nav className="mt-6">
-        <NavItem 
-          section="overview" 
-          icon={BarChart2} 
-          label="Overview" 
-        />
-        <NavItem 
-          section="users" 
-          icon={Users} 
-          label="Users" 
-        />
-        <NavItem 
-          section="listings" 
-          icon={Package} 
-          label="Listings" 
-        />
-        <NavItem 
-          section="reports" 
-          icon={Flag} 
-          label="Reports" 
-        />
-        <NavItem 
-          section="settings" 
-          icon={Settings} 
-          label="Settings" 
-        />
+        {[
+          { id: 'overview', label: 'Overview', icon: BarChart2 },
+          { id: 'users', label: 'Users', icon: Users },
+          { id: 'listings', label: 'Listings', icon: Package },
+          { id: 'reports', label: 'Reports', icon: Flag },
+          { id: 'settings', label: 'Settings', icon: Settings }
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => setActiveSection(item.id)}
+            className={`w-full flex items-center gap-3 px-6 py-3 transition-colors ${
+              activeSection === item.id 
+                ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' 
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="font-medium">{item.label}</span>
+          </button>
+        ))}
       </nav>
     </div>
   );
 
-  const NavItem = ({ section, icon: Icon, label }) => (
-    <button
-      onClick={() => setActiveSection(section)}
-      className={`w-full flex items-center gap-3 px-6 py-3 transition-colors ${
-        activeSection === section 
-          ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' 
-          : 'text-gray-600 hover:bg-gray-50'
-      }`}
-    >
-      <Icon className="w-5 h-5" />
-      <span className="font-medium">{label}</span>
-    </button>
+  const Overview = () => (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <StatCard key={index} stat={stat} />
+        ))}
+      </div>
+
+      {/* Recent Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Users */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-bold text-lg">Recent Users</h2>
+            <button className="text-blue-600 text-sm font-medium">View All</button>
+          </div>
+          <div className="space-y-4">
+            {recentUsers.map(user => (
+              <div 
+                key={user.id}
+                className="flex items-center justify-between p-4 
+                         bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div>
+                    <h3 className="font-medium">{user.name}</h3>
+                    <div className="text-sm text-gray-600">
+                      {user.email}
+                    </div>
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm 
+                               font-medium ${
+                  user.status === 'active'
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-yellow-100 text-yellow-600'
+                }`}>
+                  {user.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Reports */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-bold text-lg">Recent Reports</h2>
+            <button className="text-blue-600 text-sm font-medium">View All</button>
+          </div>
+          {/* Add reports content */}
+        </div>
+      </div>
+    </div>
   );
-
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'overview':
-        return (
-          <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <StatCard key={index} stat={stat} />
-              ))}
-            </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Reports */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-bold text-lg">Recent Reports</h2>
-                  <button className="text-blue-600 text-sm font-medium">
-                    View All
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {recentReports.map(report => (
-                    <div 
-                      key={report.id}
-                      className="flex items-center justify-between p-4 
-                               bg-gray-50 rounded-lg"
-                    >
-                      <div>
-                        <h3 className="font-medium mb-1">{report.title}</h3>
-                        <div className="text-sm text-gray-600">
-                          Reported by {report.reporter} • {report.date}
-                        </div>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-sm 
-                                   font-medium ${
-                        report.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-600'
-                          : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        {report.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Users */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="font-bold text-lg">New Users</h2>
-                  <button className="text-blue-600 text-sm font-medium">
-                    View All
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {recentUsers.map(user => (
-                    <div 
-                      key={user.id}
-                      className="flex items-center justify-between p-4 
-                               bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full"
-                        />
-                        <div>
-                          <h3 className="font-medium">{user.name}</h3>
-                          <div className="text-sm text-gray-600">
-                            {user.email}
-                          </div>
-                        </div>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-sm 
-                                   font-medium ${
-                        user.status === 'active'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-yellow-100 text-yellow-600'
-                      }`}>
-                        {user.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Pending Listings */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-bold text-lg">Pending Listings</h2>
-                <button className="text-blue-600 text-sm font-medium">
-                  View All
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left border-b border-gray-200">
-                      <th className="pb-4 font-semibold text-gray-600">Title</th>
-                      <th className="pb-4 font-semibold text-gray-600">Seller</th>
-                      <th className="pb-4 font-semibold text-gray-600">Price</th>
-                      <th className="pb-4 font-semibold text-gray-600">Date</th>
-                      <th className="pb-4 font-semibold text-gray-600">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingListings.map(listing => (
-                      <tr key={listing.id} className="border-b border-gray-100">
-                        <td className="py-4">
-                          <div className="font-medium">{listing.title}</div>
-                        </td>
-                        <td className="py-4 text-gray-600">{listing.seller}</td>
-                        <td className="py-4 text-gray-600">
-                          ${listing.price}
-                        </td>
-                        <td className="py-4 text-gray-600">
-                          {listing.submitted}
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <button className="p-1 text-green-600 
-                                           hover:bg-green-50 rounded">
-                              <Check className="w-5 h-5" />
-                            </button>
-                            <button className="p-1 text-red-600 
-                                           hover:bg-red-50 rounded">
-                              <X className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        );
-
-      // Add other section content here
-      default:
-        return (
-          <div className="text-center text-gray-600">
-            This section is under development
-          </div>
-        );
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -366,11 +214,12 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <div className="p-8">
-          {renderContent()}
+          {activeSection === 'overview' && <Overview />}
+          {/* Add other sections */}
         </div>
       </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default AdminDashboard;

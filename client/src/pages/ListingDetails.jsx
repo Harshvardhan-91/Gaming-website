@@ -1,51 +1,36 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import {
-  Star,
-  Shield,
-  Clock,
-  Heart,
-  Share2,
-  MessageCircle,
-  ChevronRight,
-  Info,
-  CheckCircle2,
-  Gamepad2,
-  Trophy,
-  AlertCircle
+import { useParams, Link } from 'react-router-dom';
+import { 
+  Star, Shield, Heart, Share2, MessageSquare, ChevronRight, 
+  Clock, Gamepad2, Trophy, Info, User, CheckCircle2 
 } from 'lucide-react';
+import { useListings } from '../context/ListingContext';
+import { useAuth } from '../context/AuthContext';
 
 const ListingDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // Mock data for a single listing
+  // Mock data for a listing - In real app, fetch from API using id
   const listing = {
     id,
-    title: "Premium Valorant Account",
-    price: 249.99,
-    seller: {
-      name: "ProGamer123",
-      rating: 4.9,
-      sales: 156,
-      verified: true,
-      joinedDate: "Aug 2023"
-    },
+    title: "Premium Valorant Account - Immortal Rank",
+    price: 299.99,
     images: Array(4).fill("/api/placeholder/800/600"),
     rating: 4.8,
     level: 150,
     skins: 45,
-    timeLeft: "2 days",
     verified: true,
-    description: "Max level Valorant account with rare skins and all battle passes completed. Perfect for serious players looking for a competitive advantage.",
+    description: "Max level Valorant account with rare skins and all battle passes completed. This account includes several exclusive items and high-tier competitive rankings.",
     features: [
-      "Account Level 150+",
+      "Immortal Rank",
       "45+ Premium Skins",
       "All Agents Unlocked",
       "Rare Battle Pass Items",
-      "Competition Ready",
-      "Clean Account History"
+      "Clean Account History",
+      "Email Access Included"
     ],
     stats: {
       rank: "Immortal 3",
@@ -53,6 +38,15 @@ const ListingDetails = () => {
       winRate: "62%",
       hoursPlayed: "1200+",
       achievements: "85%"
+    },
+    seller: {
+      id: 2,
+      name: "ProGamer123",
+      avatar: "/api/placeholder/64/64",
+      rating: 4.9,
+      sales: 156,
+      verified: true,
+      joinedDate: "Aug 2023"
     }
   };
 
@@ -88,41 +82,62 @@ const ListingDetails = () => {
   const SellerInfo = () => (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{listing.seller.name}</h3>
-            {listing.seller.verified && (
-              <CheckCircle2 className="w-5 h-5 text-blue-500" />
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            <span>{listing.seller.rating}</span>
-            <span>•</span>
-            <span>{listing.seller.sales} sales</span>
+        <div className="flex items-center gap-3">
+          <img
+            src={listing.seller.avatar}
+            alt={listing.seller.name}
+            className="w-12 h-12 rounded-full"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">{listing.seller.name}</h3>
+              {listing.seller.verified && (
+                <CheckCircle2 className="w-5 h-5 text-blue-500" />
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span>{listing.seller.rating}</span>
+              <span>•</span>
+              <span>{listing.seller.sales} sales</span>
+            </div>
           </div>
         </div>
-        <button 
+        <Link 
+          to={`/seller/${listing.seller.id}`}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          onClick={() => {}}
         >
           View Profile
-        </button>
+        </Link>
       </div>
-      <button 
-        className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 
-                 text-white rounded-xl hover:opacity-90 transition-all duration-200 
-                 flex items-center justify-center gap-2 mb-3"
-      >
-        <MessageCircle className="w-5 h-5" />
-        Contact Seller
-      </button>
-      <button 
-        className="w-full py-3 border border-gray-200 text-gray-700 rounded-xl 
-                 hover:bg-gray-50 transition-all duration-200"
-      >
-        Make Offer
-      </button>
+
+      {user ? (
+        <>
+          <button 
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 
+                     text-white rounded-xl hover:opacity-90 transition-all duration-200 
+                     flex items-center justify-center gap-2 mb-3"
+          >
+            <MessageSquare className="w-5 h-5" />
+            Contact Seller
+          </button>
+          <button 
+            className="w-full py-3 border border-gray-200 text-gray-700 rounded-xl 
+                     hover:bg-gray-50 transition-all duration-200"
+          >
+            Make Offer
+          </button>
+        </>
+      ) : (
+        <Link
+          to="/login"
+          className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 
+                   text-white rounded-xl hover:opacity-90 transition-all duration-200 
+                   flex items-center justify-center gap-2"
+        >
+          Login to Contact Seller
+        </Link>
+      )}
     </div>
   );
 
@@ -131,9 +146,7 @@ const ListingDetails = () => {
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-          <span>Browse</span>
-          <ChevronRight className="w-4 h-4" />
-          <span>Valorant</span>
+          <Link to="/browse" className="hover:text-gray-900">Browse</Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900">{listing.title}</span>
         </div>
@@ -171,7 +184,7 @@ const ListingDetails = () => {
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>{listing.timeLeft} left</span>
+                    <span>Listed 2 days ago</span>
                   </div>
                   {listing.verified && (
                     <>
@@ -193,7 +206,9 @@ const ListingDetails = () => {
               {/* Description */}
               <div>
                 <h2 className="font-semibold mb-3">Description</h2>
-                <p className="text-gray-600">{listing.description}</p>
+                <p className="text-gray-600 whitespace-pre-wrap">
+                  {listing.description}
+                </p>
               </div>
 
               {/* Features Grid */}
@@ -263,18 +278,21 @@ const ListingDetails = () => {
             {/* Additional Info */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-start gap-3 text-yellow-600">
-                <AlertCircle className="w-5 h-5 mt-0.5" />
+                <Info className="w-5 h-5 mt-0.5" />
                 <div>
                   <h3 className="font-semibold mb-1">Important Notice</h3>
                   <p className="text-sm text-gray-600">
-                    This listing will expire in {listing.timeLeft}. Act fast to secure 
-                    this account!
+                    Account credentials will be securely shared only after successful 
+                    payment verification through our system.
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Similar Listings */}
+        {/* Add similar listings section here */}
       </div>
     </div>
   );
