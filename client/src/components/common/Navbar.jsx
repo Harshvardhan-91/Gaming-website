@@ -1,5 +1,7 @@
+// components/common/Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 import {
   Search,
   ShoppingCart,
@@ -34,6 +36,7 @@ const Navbar = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   const searchPlaceholders = [
@@ -50,6 +53,18 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Handle outside clicks
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".dropdown-container")) {
+        closeAllDropdowns();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchValue.trim()) {
@@ -64,6 +79,17 @@ const Navbar = () => {
     setIsNotificationOpen(false);
     setIsProfileDropdownOpen(false);
     setIsMoreMenuOpen(false);
+    setIsAdminMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login");
+      closeAllDropdowns();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   const NotificationBadge = ({ count }) =>
@@ -73,35 +99,105 @@ const Navbar = () => {
       </span>
     );
 
+  NotificationBadge.propTypes = {
+    count: PropTypes.number.isRequired,
+  };
+
   const DropdownButton = ({ children, onClick, className = "" }) => (
     <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors ${className}`}
+      onClick={() => {
+        closeAllDropdowns();
+        onClick?.();
+      }}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 
+                transition-colors ${className}`}
     >
       {children}
     </button>
   );
 
+  DropdownButton.propTypes = {
+    children: PropTypes.node.isRequired,
+    onClick: PropTypes.func,
+    className: PropTypes.string,
+  };
+
   const DropdownItem = ({ icon: Icon, label, onClick, dangerous }) => (
     <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
-        dangerous
-          ? "text-red-600 hover:bg-red-50"
-          : "text-gray-700 hover:bg-gray-100"
-      }`}
+      onClick={() => {
+        onClick?.();
+        closeAllDropdowns();
+      }}
+      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm 
+                transition-colors ${
+                  dangerous
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
     >
       <Icon className="w-4 h-4" />
       <span>{label}</span>
     </button>
   );
 
+  DropdownItem.propTypes = {
+    icon: PropTypes.elementType.isRequired,
+    label: PropTypes.string.isRequired,
+    onClick: PropTypes.func,
+    dangerous: PropTypes.bool,
+  };
+
   const DropdownContainer = ({ children, className = "" }) => (
     <div
-      className={`absolute top-full mt-2 bg-white rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 ${className}`}
+      className={`dropdown-container absolute top-full mt-2 bg-white rounded-xl 
+                shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 
+                ${className}`}
     >
       {children}
     </div>
+  );
+
+  DropdownContainer.propTypes = {
+    children: PropTypes.node.isRequired,
+    className: PropTypes.string,
+  };
+
+  const AdminMenu = () => (
+    <DropdownContainer className="left-0 w-64">
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-purple-600" />
+          <h3 className="font-semibold text-purple-600">Admin Panel</h3>
+        </div>
+      </div>
+      <div className="py-1">
+        <DropdownItem
+          icon={TrendingUp}
+          label="Dashboard"
+          onClick={() => navigate("/admin")}
+        />
+        <DropdownItem
+          icon={User}
+          label="User Management"
+          onClick={() => navigate("/admin/users")}
+        />
+        <DropdownItem
+          icon={Package}
+          label="Listings"
+          onClick={() => navigate("/admin/listings")}
+        />
+        <DropdownItem
+          icon={Bell}
+          label="Reports"
+          onClick={() => navigate("/admin/reports")}
+        />
+        <DropdownItem
+          icon={Settings}
+          label="Settings"
+          onClick={() => navigate("/admin/settings")}
+        />
+      </div>
+    </DropdownContainer>
   );
 
   const ProfileDropdown = () => (
@@ -109,11 +205,22 @@ const Navbar = () => {
       {user && (
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <img
-              src={user.avatar || "/api/placeholder/48/48"}
-              alt="Profile"
-              className="w-12 h-12 rounded-full object-cover"
-            />
+            <div className="relative">
+              <img
+                src={user.avatar || "/api/placeholder/48/48"}
+                alt="Profile"
+                className="w-12 h-12 rounded-full object-cover"
+              />
+              {user.role === "admin" && (
+                <span
+                  className="absolute -bottom-1 -right-1 bg-purple-600 
+                             text-white text-xs rounded-full w-4 h-4 flex 
+                             items-center justify-center"
+                >
+                  A
+                </span>
+              )}
+            </div>
             <div className="overflow-hidden">
               <p className="font-semibold truncate">{user.name || "User"}</p>
               <p className="text-sm text-gray-500 truncate">{user.email}</p>
@@ -132,13 +239,28 @@ const Navbar = () => {
           label="Dashboard"
           onClick={() => navigate("/dashboard")}
         />
+        {user?.role === "admin" && (
+          <>
+            <DropdownItem
+              icon={Shield}
+              label="Admin Dashboard"
+              onClick={() => navigate("/admin")}
+            />
+            <div className="border-t border-gray-200 my-1" />
+          </>
+        )}
         <DropdownItem
           icon={Settings}
           label="Settings"
           onClick={() => navigate("/settings")}
         />
         <div className="border-t border-gray-200 my-1" />
-        <DropdownItem icon={LogOut} label="Logout" onClick={logout} dangerous />
+        <DropdownItem
+          icon={LogOut}
+          label="Logout"
+          onClick={handleLogout}
+          dangerous
+        />
       </div>
     </DropdownContainer>
   );
@@ -204,8 +326,6 @@ const Navbar = () => {
     </DropdownContainer>
   );
 
-  // Previous code remains the same until the end of NotificationDropdown component...
-
   return (
     <nav className="w-full bg-white shadow-sm sticky top-0 z-40">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 py-2 px-4">
@@ -216,7 +336,7 @@ const Navbar = () => {
 
       <div className="container mx-auto px-4 py-4 relative">
         <div className="flex items-center justify-between gap-4">
-          {/* Left Section */}
+          {/* Left Section with Logo and Navigation */}
           <div className="flex items-center gap-6">
             <button
               className="lg:hidden p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -224,6 +344,7 @@ const Navbar = () => {
                 setIsMobileMenuOpen(!isMobileMenuOpen);
                 closeAllDropdowns();
               }}
+              aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
                 <X className="h-6 w-6 text-gray-700" />
@@ -233,7 +354,10 @@ const Navbar = () => {
             </button>
 
             <Link to="/" className="text-2xl font-bold">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span
+                className="bg-gradient-to-r from-blue-600 to-purple-600 
+                           bg-clip-text text-transparent"
+              >
                 GameTrade
               </span>
             </Link>
@@ -246,12 +370,23 @@ const Navbar = () => {
                 Browse
               </Link>
 
+              {user?.role === "admin" && (
+                <div className="relative">
+                  <DropdownButton
+                    onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                    className="text-purple-600 hover:text-purple-700"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="font-medium">Admin</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </DropdownButton>
+                  {isAdminMenuOpen && <AdminMenu />}
+                </div>
+              )}
+
               <div className="relative">
                 <DropdownButton
-                  onClick={() => {
-                    closeAllDropdowns();
-                    setIsMoreMenuOpen(!isMoreMenuOpen);
-                  }}
+                  onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
                 >
                   <span className="font-medium">More</span>
                   <ChevronDown className="w-4 h-4" />
@@ -267,10 +402,7 @@ const Navbar = () => {
                         key={item.to}
                         icon={item.icon}
                         label={item.label}
-                        onClick={() => {
-                          navigate(item.to);
-                          closeAllDropdowns();
-                        }}
+                        onClick={() => navigate(item.to)}
                       />
                     ))}
                   </DropdownContainer>
@@ -295,7 +427,7 @@ const Navbar = () => {
             </form>
           </div>
 
-          {/* Right Section */}
+          {/* Right Section with User Menu */}
           <div className="flex items-center gap-2">
             <div className="hidden lg:flex items-center gap-3">
               {!user ? (
@@ -308,7 +440,7 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to="/signup"
-                    className="w-full px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 
                              text-white rounded-xl hover:opacity-90 transition-opacity duration-200 font-medium"
                   >
                     Sign Up
@@ -349,7 +481,7 @@ const Navbar = () => {
 
                   <Link
                     to="/sell"
-                    className="w-full px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 
                              text-white rounded-xl hover:opacity-90 transition-opacity duration-200 font-medium"
                   >
                     Sell Now
@@ -386,7 +518,7 @@ const Navbar = () => {
               type="text"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Search games, accounts..."
+              placeholder={searchPlaceholders[placeholderIndex]}
               className="w-full px-4 py-2.5 pl-10 border border-gray-200 rounded-full"
             />
             <Search className="absolute left-3 top-3 text-gray-400" />
@@ -397,7 +529,49 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="lg:hidden fixed inset-x-0 top-[calc(100%+1px)] bg-white shadow-lg z-50 max-h-[calc(100vh-100%)] overflow-y-auto">
             <div className="p-4 space-y-4">
-              {/* Mobile Menu Links */}
+              {/* User Info Section for Admin */}
+              {user?.role === "admin" && (
+                <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Shield className="w-5 h-5 text-purple-600" />
+                    <span className="font-medium text-purple-600">
+                      Admin Access
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <Link
+                      to="/admin"
+                      className="block px-4 py-2 text-purple-600 hover:bg-purple-100 rounded-lg"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/admin/users"
+                      className="block px-4 py-2 text-purple-600 hover:bg-purple-100 rounded-lg"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      User Management
+                    </Link>
+                    <Link
+                      to="/admin/listings"
+                      className="block px-4 py-2 text-purple-600 hover:bg-purple-100 rounded-lg"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Listings
+                    </Link>
+                    <Link
+                      to="/admin/settings"
+                      className="block px-4 py-2 text-purple-600 hover:bg-purple-100 rounded-lg"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Primary Navigation */}
               <div className="space-y-2">
                 <Link
                   to="/"
@@ -415,6 +589,46 @@ const Navbar = () => {
                   <Package className="w-5 h-5" />
                   <span className="font-medium">Browse</span>
                 </Link>
+
+                {/* Quick Actions Grid */}
+                {user && (
+                  <div className="grid grid-cols-3 gap-2 py-2">
+                    <Link
+                      to="/cart"
+                      className="flex flex-col items-center gap-1 p-3 text-gray-700 rounded-lg hover:bg-gray-100"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      <span className="text-xs">Cart</span>
+                    </Link>
+                    <Link
+                      to="/chat"
+                      className="flex flex-col items-center gap-1 p-3 text-gray-700 rounded-lg hover:bg-gray-100 relative"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                      <span className="text-xs">Messages</span>
+                      {unreadMessages > 0 && (
+                        <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                          {unreadMessages}
+                        </span>
+                      )}
+                    </Link>
+                    <Link
+                      to="/notifications"
+                      className="flex flex-col items-center gap-1 p-3 text-gray-700 rounded-lg hover:bg-gray-100 relative"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Bell className="w-5 h-5" />
+                      <span className="text-xs">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
+                )}
 
                 {/* More Menu Section */}
                 <div className="border-t border-gray-100 pt-2">
@@ -458,7 +672,7 @@ const Navbar = () => {
                 {user && (
                   <div className="border-t border-gray-100 pt-2">
                     <Link
-                      to="/create-listing"
+                      to="/sell"
                       className="flex items-center gap-3 p-3 text-gray-700 rounded-lg hover:bg-gray-100"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -473,6 +687,14 @@ const Navbar = () => {
                       <User className="w-5 h-5" />
                       <span className="font-medium">My Profile</span>
                     </Link>
+                    <Link
+                      to="/settings"
+                      className="flex items-center gap-3 p-3 text-gray-700 rounded-lg hover:bg-gray-100"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Settings className="w-5 h-5" />
+                      <span className="font-medium">Settings</span>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -484,8 +706,8 @@ const Navbar = () => {
                     <Link
                       to="/login"
                       className="block w-full py-2.5 text-center border border-blue-600 
-                       text-blue-600 rounded-lg hover:bg-blue-50 
-                       transition-colors font-medium"
+                               text-blue-600 rounded-lg hover:bg-blue-50 
+                               transition-colors font-medium"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Login
@@ -493,8 +715,8 @@ const Navbar = () => {
                     <Link
                       to="/signup"
                       className="block w-full py-2.5 text-center bg-blue-600 
-                       text-white rounded-lg hover:bg-blue-700 
-                       transition-colors font-medium"
+                               text-white rounded-lg hover:bg-blue-700 
+                               transition-colors font-medium"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Sign Up
@@ -504,13 +726,13 @@ const Navbar = () => {
                   <div className="space-y-3">
                     <button
                       onClick={() => {
-                        logout();
+                        handleLogout();
                         setIsMobileMenuOpen(false);
                       }}
                       className="w-full py-2.5 text-center text-red-600 
-                       border border-red-600 rounded-lg 
-                       hover:bg-red-50 transition-colors font-medium
-                       flex items-center justify-center gap-2"
+                               border border-red-600 rounded-lg 
+                               hover:bg-red-50 transition-colors font-medium
+                               flex items-center justify-center gap-2"
                     >
                       <LogOut className="w-5 h-5" />
                       Logout
@@ -523,9 +745,12 @@ const Navbar = () => {
         )}
 
         {/* Backdrop for dropdowns */}
-        {(isNotificationOpen || isProfileDropdownOpen || isMoreMenuOpen) && (
+        {(isNotificationOpen ||
+          isProfileDropdownOpen ||
+          isMoreMenuOpen ||
+          isAdminMenuOpen) && (
           <div
-            className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/20 z-30"
             onClick={closeAllDropdowns}
           />
         )}

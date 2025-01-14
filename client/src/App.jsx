@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ChatProvider } from './context/ChatContext';
 import { ListingProvider } from './context/ListingContext';
+import { AdminProvider } from './context/AdminContext';
 import { ToastContainer } from './components/ui/Toast';
 
 // Components
@@ -21,7 +22,7 @@ import CreateListing from './pages/CreateListing';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminRoutes from './routes/AdminRoutes';
 import Notifications from './pages/Notifications';
 import SellerProfile from './pages/SellerProfile';
 import Search from './pages/SearchPage';
@@ -30,10 +31,11 @@ import Cart from './pages/Cart';
 
 const App = () => {
   return (
-      <AuthProvider>
-        <NotificationProvider>
-          <ChatProvider>
-            <ListingProvider>
+    <AuthProvider>
+      <NotificationProvider>
+        <ChatProvider>
+          <ListingProvider>
+            <AdminProvider>
               <div className="flex flex-col min-h-screen">
                 <Navbar />
                 <main className="flex-grow">
@@ -48,9 +50,16 @@ const App = () => {
                     <Route path="/search" element={<Search />} />
                     <Route path="/unauthorized" element={<Unauthorized />} />
                     <Route path="/cart" element={<Cart />} />
-                    <Route path="/sell" element={<CreateListing />} />
 
                     {/* Protected Routes */}
+                    <Route
+                      path="/sell"
+                      element={
+                        <ProtectedRoute>
+                          <CreateListing />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="/dashboard"
                       element={
@@ -83,11 +92,13 @@ const App = () => {
                         </ProtectedRoute>
                       }
                     />
+
+                    {/* Admin Routes */}
                     <Route
                       path="/admin/*"
                       element={
                         <ProtectedRoute allowedRoles={['admin']}>
-                          <AdminDashboard />
+                          <AdminRoutes />
                         </ProtectedRoute>
                       }
                     />
@@ -120,10 +131,11 @@ const App = () => {
                 <Footer />
                 <ToastContainer />
               </div>
-            </ListingProvider>
-          </ChatProvider>
-        </NotificationProvider>
-      </AuthProvider>
+            </AdminProvider>
+          </ListingProvider>
+        </ChatProvider>
+      </NotificationProvider>
+    </AuthProvider>
   );
 };
 

@@ -1,25 +1,20 @@
+// context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // Check for existing auth session on load
   useEffect(() => {
-    // Check for existing auth token
-    const checkAuth = async () => {
-      const token = localStorage.getItem('gametradeToken');
-      if (token) {
-        // TODO: Validate token with backend
-        // For now, we'll simulate a logged-in user
-        setUser({
-          id: '1',
-          name: 'John Doe',
-          email: 'john@example.com',
-          avatar: '/api/placeholder/40/40',
-          role: 'user'
-        });
+    const checkAuth = () => {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
       setLoading(false);
     };
@@ -29,81 +24,56 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // TODO: Implement real API call
-      // Simulated login response
-      const mockUser = {
-        id: '1',
-        name: 'John Doe',
-        email: email,
-        avatar: '/api/placeholder/40/40',
-        role: 'user'
-      };
+      // Mock login API - replace with actual API call
+      if (email === 'admin@example.com' && password === 'admin123') {
+        const adminUser = {
+          id: '1',
+          name: 'Admin User',
+          email: 'admin@example.com',
+          role: 'admin',
+          avatar: '/api/placeholder/48/48'
+        };
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        setUser(adminUser);
+        return { success: true };
+      } 
+      else if (email === 'user@example.com' && password === 'user123') {
+        const regularUser = {
+          id: '2',
+          name: 'Regular User',
+          email: 'user@example.com',
+          role: 'user',
+          avatar: '/api/placeholder/48/48'
+        };
+        localStorage.setItem('user', JSON.stringify(regularUser));
+        setUser(regularUser);
+        return { success: true };
+      }
       
-      const mockToken = 'mock-jwt-token';
-      localStorage.setItem('gametradeToken', mockToken);
-      setUser(mockUser);
-      return { success: true };
+      throw new Error('Invalid credentials');
     } catch (error) {
-      return { success: false, error: 'Invalid credentials' };
-    }
-  };
-
-  const signup = async (userData) => {
-    try {
-      // TODO: Implement real API call
-      const mockUser = {
-        id: '1',
-        name: userData.name,
-        email: userData.email,
-        avatar: '/api/placeholder/40/40',
-        role: 'user'
-      };
-      
-      const mockToken = 'mock-jwt-token';
-      localStorage.setItem('gametradeToken', mockToken);
-      setUser(mockUser);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: 'Registration failed' };
+      return { success: false, error: error.message };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('gametradeToken');
+    localStorage.removeItem('user');
     setUser(null);
-  };
-
-  const updateProfile = async (userData) => {
-    try {
-      // TODO: Implement real API call
-      setUser(prev => ({ ...prev, ...userData }));
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: 'Update failed' };
-    }
+    navigate('/login');
   };
 
   const value = {
     user,
     loading,
     login,
-    signup,
     logout,
-    updateProfile,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin'
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
