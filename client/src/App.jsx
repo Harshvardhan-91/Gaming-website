@@ -20,18 +20,20 @@ import ListingDetails from './pages/ListingDetails';
 import CreateListing from './pages/CreateListing';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
+import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Notifications from './pages/Notifications';
 import SellerProfile from './pages/SellerProfile';
 import Search from './pages/SearchPage';
 import Unauthorized from './pages/Unauthorized';
+import Cart from './pages/Cart';
 
 const App = () => {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <ChatProvider>
-          <ListingProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <ChatProvider>
+            <ListingProvider>
               <div className="flex flex-col min-h-screen">
                 <Navbar />
                 <main className="flex-grow">
@@ -45,13 +47,15 @@ const App = () => {
                     <Route path="/seller/:id" element={<SellerProfile />} />
                     <Route path="/search" element={<Search />} />
                     <Route path="/unauthorized" element={<Unauthorized />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/sell" element={<CreateListing />} />
 
                     {/* Protected Routes */}
                     <Route
-                      path="/create-listing"
+                      path="/dashboard"
                       element={
                         <ProtectedRoute>
-                          <CreateListing />
+                          <Dashboard />
                         </ProtectedRoute>
                       }
                     />
@@ -116,10 +120,10 @@ const App = () => {
                 <Footer />
                 <ToastContainer />
               </div>
-          </ListingProvider>
-        </ChatProvider>
-      </NotificationProvider>
-    </AuthProvider>
+            </ListingProvider>
+          </ChatProvider>
+        </NotificationProvider>
+      </AuthProvider>
   );
 };
 
