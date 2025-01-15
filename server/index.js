@@ -11,10 +11,28 @@ dotenv.config();
 
 const app = express();
 
+// CORS Configuration
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:5173", // Your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Allow credentials (cookies, authorization headers)
+}));
+
+// Handle preflight requests (OPTIONS)
+app.options('*', cors({
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -34,7 +52,8 @@ const server = app.listen(PORT, () => {
 // Socket.io setup
 const io = socket(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
     credentials: true
   }
 });
@@ -53,5 +72,14 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected');
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    error: 'Something broke!'
   });
 });

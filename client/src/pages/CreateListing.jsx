@@ -74,13 +74,47 @@ const CreateListing = () => {
     }));
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => {
+      // Create a shallow copy of the previous state
+      const newData = { ...prevData };
+      
+      // Check if the field name contains a dot (.) for nested objects
+      if (name.includes('.')) {
+        const [parent, child] = name.split('.');
+        newData[parent] = {
+          ...newData[parent],
+          [child]: value
+        };
+      } else {
+        newData[name] = value;
+      }
+      
+      return newData;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (step < 3) {
       setStep(prev => prev + 1);
       return;
     }
-    // TODO: Handle final submission
+    // Here you would trim the values before submission
+    const trimmedData = {
+      ...formData,
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      features: formData.features.map(f => f.trim()),
+      accountDetails: {
+        ...formData.accountDetails,
+        username: formData.accountDetails.username.trim(),
+        email: formData.accountDetails.email.trim(),
+        password: formData.accountDetails.password.trim()
+      }
+    };
+    // TODO: Handle final submission with trimmedData
     navigate('/listing/new-listing-id');
   };
 
@@ -92,8 +126,9 @@ const CreateListing = () => {
         </label>
         <input
           type="text"
+          name="title"
           value={formData.title}
-          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+          onChange={handleChange}
           placeholder="e.g., Rare Valorant Account with Premium Skins"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -105,8 +140,9 @@ const CreateListing = () => {
           Game Type
         </label>
         <select
+          name="gameType"
           value={formData.gameType}
-          onChange={(e) => setFormData(prev => ({ ...prev, gameType: e.target.value }))}
+          onChange={handleChange}
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         >
@@ -123,8 +159,9 @@ const CreateListing = () => {
         </label>
         <input
           type="number"
+          name="price"
           value={formData.price}
-          onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+          onChange={handleChange}
           placeholder="Enter price"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -136,8 +173,9 @@ const CreateListing = () => {
           Description
         </label>
         <textarea
+          name="description"
           value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          onChange={handleChange}
           placeholder="Describe your account in detail..."
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
@@ -160,13 +198,15 @@ const CreateListing = () => {
                 className="flex-1 px-4 py-3 rounded-xl border border-gray-200 
                          focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
-              <button
-                type="button"
-                onClick={() => removeFeature(index)}
-                className="p-3 text-red-500 hover:bg-red-50 rounded-xl"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+              {index > 0 && (
+                <button
+                  type="button"
+                  onClick={() => removeFeature(index)}
+                  className="p-3 text-red-500 hover:bg-red-50 rounded-xl"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
             </div>
           ))}
           <button
@@ -185,8 +225,80 @@ const CreateListing = () => {
 
   const AccountDetails = () => (
     <div className="space-y-6">
-      {/* Similar to BasicInfo component but with account-specific fields */}
-      {/* Add account level, rank, age, etc. */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Account Level
+        </label>
+        <input
+          type="text"
+          name="level"
+          value={formData.level}
+          onChange={handleChange}
+          placeholder="Enter account level"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Account Rank
+        </label>
+        <input
+          type="text"
+          name="rank"
+          value={formData.rank}
+          onChange={handleChange}
+          placeholder="Enter account rank"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Account Username
+        </label>
+        <input
+          type="text"
+          name="accountDetails.username"
+          value={formData.accountDetails.username}
+          onChange={handleChange}
+          placeholder="Enter account username"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Account Email
+        </label>
+        <input
+          type="email"
+          name="accountDetails.email"
+          value={formData.accountDetails.email}
+          onChange={handleChange}
+          placeholder="Enter account email"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Account Password
+        </label>
+        <input
+          type="password"
+          name="accountDetails.password"
+          value={formData.accountDetails.password}
+          onChange={handleChange}
+          placeholder="Enter account password"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
     </div>
   );
 
@@ -201,6 +313,7 @@ const CreateListing = () => {
               className="w-full h-full object-cover rounded-xl"
             />
             <button
+              type="button"
               onClick={() => removeImage(index)}
               className="absolute top-2 right-2 p-1.5 bg-red-500 text-white 
                        rounded-full opacity-0 group-hover:opacity-100 
@@ -236,7 +349,6 @@ const CreateListing = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-3xl">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Create New Listing</h1>
           <p className="text-gray-600">
@@ -248,7 +360,6 @@ const CreateListing = () => {
           </p>
         </div>
 
-        {/* Progress Bar */}
         <div className="w-full bg-gray-100 h-2 rounded-full mb-8">
           <div 
             className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full 
@@ -257,7 +368,6 @@ const CreateListing = () => {
           />
         </div>
 
-        {/* Form */}
         <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
           <form onSubmit={handleSubmit}>
             {step === 1 && <BasicInfo />}

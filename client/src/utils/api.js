@@ -8,10 +8,18 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Add withCredentials for cookies
 });
 
-// Add token to requests if it exists
+// Request interceptor
 api.interceptors.request.use((config) => {
+  console.log('API Request:', {
+    url: config.url,
+    method: config.method,
+    data: config.data,
+    headers: config.headers
+  });
+  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -19,57 +27,30 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle response errors
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
     console.error('API Error:', {
+      url: error.config?.url,
       status: error.response?.status,
       data: error.response?.data,
-      error: error.message
+      message: error.message
     });
-
-    // Handle 401 Unauthorized
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      // Only redirect to login if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      window.location.href = '/login';
     }
-
     return Promise.reject(error);
   }
 );
 
-const auth = {
-  login: async (credentials) => {
-    try {
-      const response = await api.post('/auth/login', credentials);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Login failed' };
-    }
-  },
-
-  register: async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Registration failed' };
-    }
-  },
-
-  verifyToken: async () => {
-    try {
-      const response = await api.get('/auth/me');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Token verification failed' };
-    }
-  }
-};
-
-export { auth };
 export default api;
