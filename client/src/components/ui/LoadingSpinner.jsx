@@ -1,10 +1,12 @@
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 
-const LoadingSpinner = () => {
+export const LoadingSpinner = ({ className = '', ...props }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
+    <Loader2 
+      className={`animate-spin ${className}`}
+      {...props}
+    />
   );
 };
 

@@ -1,108 +1,61 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, MessageCircle, Star, Shield, Clock } from 'lucide-react';
-import { formatPrice, formatRelativeTime } from '../../utils/helpers';
+import { useNavigate } from 'react-router-dom';
+import { Check, Star } from 'lucide-react';
 
 const ListingCard = ({ listing }) => {
-  const {
-    _id,
-    title,
-    price,
-    gameType,
-    images,
-    seller,
-    views,
-    verified,
-    createdAt
-  } = listing;
+  const navigate = useNavigate();
 
   return (
-    <Link 
-      to={`/listing/${_id}`}
-      className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
+    <div 
+      onClick={() => navigate(`/listing/${listing._id}`)}
+      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow 
+                 cursor-pointer overflow-hidden"
     >
-      {/* Image */}
-      <div className="aspect-video relative overflow-hidden rounded-t-xl">
+      <div className="aspect-[4/3] relative">
         <img
-          src={images[0]}
-          alt={title}
+          src={listing.images[0]}
+          alt={listing.title}
           className="w-full h-full object-cover"
         />
-        {verified && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-            <Shield className="w-3 h-3" />
-            Verified
+        {listing.seller.verified && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 
+                        rounded-full">
+            <Check className="w-4 h-4" />
           </div>
         )}
       </div>
-
-      {/* Content */}
+      
       <div className="p-4">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex justify-between items-start mb-2">
           <h3 className="font-semibold text-gray-900 line-clamp-2">
-            {title}
+            {listing.title}
           </h3>
-          <span className="text-lg font-bold text-blue-600 whitespace-nowrap">
-            {formatPrice(price)}
+          <span className="text-green-600 font-semibold whitespace-nowrap ml-2">
+            ${listing.price}
           </span>
         </div>
 
-        <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
-          <span className="px-2 py-1 bg-gray-100 rounded-full">{gameType}</span>
-          <span className="flex items-center gap-1">
-            <Eye className="w-4 h-4" />
-            {views}
+        <div className="flex items-center text-sm text-gray-500 mb-2">
+          <span className="bg-gray-100 px-2 py-1 rounded">
+            {listing.gameType}
           </span>
-        </div>
-
-        {/* Seller Info */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-              {seller.avatar ? (
-                <img
-                  src={seller.avatar}
-                  alt={seller.name}
-                  className="w-full h-full rounded-full"
-                />
-              ) : (
-                <span className="text-sm font-medium text-gray-600">
-                  {seller.name.charAt(0)}
-                </span>
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{seller.name}</p>
-              {seller.rating && (
-                <div className="flex items-center gap-1 text-xs text-yellow-500">
-                  <Star className="w-3 h-3 fill-current" />
-                  {seller.rating.toFixed(1)}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {formatRelativeTime(createdAt)}
+          <span className="mx-2">•</span>
+          <div className="flex items-center">
+            <Star className="w-4 h-4 text-yellow-400 mr-1" />
+            {listing.seller.rating.toFixed(1)}
           </div>
         </div>
 
-        {/* Contact Button */}
-        <button
-          className="mt-4 w-full py-2 px-4 bg-blue-50 hover:bg-blue-100 
-                   text-blue-600 rounded-lg font-medium text-sm flex items-center 
-                   justify-center gap-2 transition-colors duration-200"
-          onClick={(e) => {
-            e.preventDefault();
-            // TODO: Implement chat functionality
-          }}
-        >
-          <MessageCircle className="w-4 h-4" />
-          Contact Seller
-        </button>
+        <div className="flex items-center text-sm text-gray-500">
+          <img
+            src={listing.seller.avatar}
+            alt={listing.seller.name}
+            className="w-5 h-5 rounded-full mr-2"
+          />
+          <span>{listing.seller.name}</span>
+        </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
