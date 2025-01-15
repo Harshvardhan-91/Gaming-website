@@ -49,17 +49,15 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (formData) => {
     try {
-      console.log('Sending registration data:', formData);
       const response = await api.auth.register(formData);
-      console.log('Registration response:', response);
-
+      
       if (response.success) {
         localStorage.setItem('token', response.token);
         setCurrentUser(response.user);
         setIsAuthenticated(true);
         return { success: true };
       }
-
+      
       return {
         success: false,
         error: response.error || 'Registration failed'
@@ -68,22 +66,26 @@ export const AuthProvider = ({ children }) => {
       console.error('Signup error:', error);
       return {
         success: false,
-        error: error.error || 'Registration failed'
+        error: error.message || 'Registration failed'
       };
     }
   };
 
   const login = async (email, password) => {
     try {
-      const response = await api.auth.login({ email, password });
-
-      if (response.success) {
+      setLoading(true);
+      const response = await api.auth.login({ 
+        email: email.trim(), 
+        password: password.trim() 
+      });
+      
+      if (response.success && response.token) {
         localStorage.setItem('token', response.token);
         setCurrentUser(response.user);
         setIsAuthenticated(true);
         return { success: true };
       }
-
+  
       return {
         success: false,
         error: response.error || 'Invalid credentials'
@@ -92,8 +94,10 @@ export const AuthProvider = ({ children }) => {
       console.error('Login error:', error);
       return {
         success: false,
-        error: error.error || 'Login failed'
+        error: error.message || 'Login failed'
       };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,8 +109,8 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (userData) => {
     try {
-      const response = await api.put('/auth/profile', userData);
-
+      const response = await api.auth.updateProfile(userData);
+      
       if (response.success) {
         setCurrentUser(response.user);
         return { success: true };
@@ -120,7 +124,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Profile update error:', error);
       return {
         success: false,
-        error: error.error || 'Profile update failed'
+        error: error.message || 'Profile update failed'
       };
     }
   };

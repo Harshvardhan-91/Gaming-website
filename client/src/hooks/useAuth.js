@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import toast from 'react-hot-toast';
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -14,20 +13,23 @@ const useAuth = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         setUser(null);
-        return;
+        return false;
       }
 
       const response = await api.get('/auth/me');
       if (response?.data?.user) {
         setUser(response.data.user);
+        return true;
       } else {
         localStorage.removeItem('token');
         setUser(null);
+        return false;
       }
     } catch (error) {
       console.error('Auth check error:', error);
       localStorage.removeItem('token');
       setUser(null);
+      return false;
     }
   }, []);
 
@@ -35,28 +37,20 @@ const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Attempting login with:', email);
-      
       const response = await api.post('/auth/login', {
         email: email.trim(),
         password: password.trim()
       });
 
-      console.log('Login response:', response);
-
-      // If response is successful
-      if (response?.data?.token) {
+      if (response?.data?.token && response?.data?.user) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
-        toast.success('Login successful!');
-        navigate('/');
+        await checkAuth(); // Verify and get full user data
         return { success: true };
       }
 
-      // If response has an error
       const errorMessage = response?.data?.error || 'Login failed';
       setError(errorMessage);
-      toast.error(errorMessage);
       return { success: false, error: errorMessage };
 
     } catch (error) {
@@ -66,12 +60,11 @@ const useAuth = () => {
         error.response?.data?.message || 
         'Invalid credentials';
       setError(errorMessage);
-      toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [checkAuth]);
 
   const signup = useCallback(async (userData) => {
     setLoading(true);
@@ -83,17 +76,15 @@ const useAuth = () => {
         password: userData.password
       });
 
-      if (response?.data?.token) {
+      if (response?.data?.token && response?.data?.user) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
-        toast.success('Account created successfully!');
-        navigate('/');
+        await checkAuth(); // Verify and get full user data
         return { success: true };
       }
 
       const errorMessage = response?.data?.error || 'Registration failed';
       setError(errorMessage);
-      toast.error(errorMessage);
       return { success: false, error: errorMessage };
 
     } catch (error) {
@@ -103,17 +94,15 @@ const useAuth = () => {
         error.response?.data?.message || 
         'Registration failed';
       setError(errorMessage);
-      toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [checkAuth]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setUser(null);
-    toast.success('Logged out successfully');
     navigate('/login');
   }, [navigate]);
 

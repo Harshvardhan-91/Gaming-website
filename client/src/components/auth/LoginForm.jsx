@@ -16,7 +16,6 @@ const LoginForm = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Clear validation errors when route changes
   useEffect(() => {
     setValidationErrors({});
     setFormData({ email: '', password: '' });
@@ -27,18 +26,14 @@ const LoginForm = () => {
     
     if (!formData.email) {
       errors.email = 'Email is required';
-      toast.error('Email is required');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email';
-      toast.error('Please enter a valid email');
     }
     
     if (!formData.password) {
       errors.password = 'Password is required';
-      toast.error('Password is required');
     } else if (formData.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
-      toast.error('Password must be at least 6 characters');
     }
 
     setValidationErrors(errors);
@@ -51,7 +46,6 @@ const LoginForm = () => {
       ...prev,
       [name]: value.trim()
     }));
-    // Clear validation error when user starts typing
     if (validationErrors[name]) {
       setValidationErrors(prev => ({
         ...prev,
@@ -70,8 +64,6 @@ const LoginForm = () => {
     try {
       const result = await login(formData.email, formData.password);
       if (result.success) {
-        toast.success('Login successful!');
-        // Navigate to the page they were trying to access, or home
         const redirectTo = location.state?.from?.pathname || '/';
         navigate(redirectTo);
       } else {
