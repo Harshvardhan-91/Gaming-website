@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
@@ -12,13 +13,9 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
 
   const checkAuthStatus = async () => {
     try {
@@ -28,20 +25,54 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await api.auth.verifyToken();
-      if (response.success) {
-        setCurrentUser(response.user);
+      const response = await api.get('/auth/me');
+      
+      if (response.data?.success) {
+        setUser(response.data.user);
         setIsAuthenticated(true);
       } else {
         localStorage.removeItem('token');
-        setCurrentUser(null);
+        setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Auth status check error:', error);
       localStorage.removeItem('token');
-      setCurrentUser(null);
+      setUser(null);
       setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check auth status when the app loads
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      setLoading(true);
+      const response = await api.post('/auth/login', {
+        email: email.trim(),
+        password: password.trim()
+      });
+
+      if (response.data?.success) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        toast.success('Login successful!');
+        return { success: true };
+      }
+
+      const errorMessage = response.data?.error || 'Invalid credentials';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -49,53 +80,28 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (formData) => {
     try {
-      const response = await api.auth.register(formData);
-      
-      if (response.success) {
-        localStorage.setItem('token', response.token);
-        setCurrentUser(response.user);
-        setIsAuthenticated(true);
-        return { success: true };
-      }
-      
-      return {
-        success: false,
-        error: response.error || 'Registration failed'
-      };
-    } catch (error) {
-      console.error('Signup error:', error);
-      return {
-        success: false,
-        error: error.message || 'Registration failed'
-      };
-    }
-  };
-
-  const login = async (email, password) => {
-    try {
       setLoading(true);
-      const response = await api.auth.login({ 
-        email: email.trim(), 
-        password: password.trim() 
+      const response = await api.post('/auth/register', {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password
       });
-      
-      if (response.success && response.token) {
-        localStorage.setItem('token', response.token);
-        setCurrentUser(response.user);
+
+      if (response.data?.success) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
         setIsAuthenticated(true);
+        toast.success('Account created successfully!');
         return { success: true };
       }
-  
-      return {
-        success: false,
-        error: response.error || 'Invalid credentials'
-      };
+
+      const errorMessage = response.data?.error || 'Registration failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        error: error.message || 'Login failed'
-      };
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -103,46 +109,24 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
-    setCurrentUser(null);
+    setUser(null);
     setIsAuthenticated(false);
-  };
-
-  const updateProfile = async (userData) => {
-    try {
-      const response = await api.auth.updateProfile(userData);
-      
-      if (response.success) {
-        setCurrentUser(response.user);
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        error: response.error || 'Profile update failed'
-      };
-    } catch (error) {
-      console.error('Profile update error:', error);
-      return {
-        success: false,
-        error: error.message || 'Profile update failed'
-      };
-    }
+    toast.success('Logged out successfully');
   };
 
   const value = {
-    currentUser,
+    user,
     isAuthenticated,
     loading,
     signup,
     login,
     logout,
-    updateProfile,
     checkAuthStatus
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

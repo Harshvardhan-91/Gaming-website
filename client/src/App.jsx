@@ -1,16 +1,17 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ChatProvider } from './context/ChatContext';
 import { ListingProvider } from './context/ListingContext';
 import { AdminProvider } from './context/AdminContext';
+import useAuth from './hooks/useAuth';
 
 // Components
-import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Pages
 import Home from './pages/Home';
@@ -22,12 +23,31 @@ import CreateListing from './pages/CreateListing';
 import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
-import AdminRoutes from './routes/AdminRoutes';
+import AdminDashboard from './pages/AdminDashboard';
 import Notifications from './pages/Notifications';
 import SellerProfile from './pages/SellerProfile';
 import Search from './pages/SearchPage';
 import Unauthorized from './pages/Unauthorized';
 import Cart from './pages/Cart';
+
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, loading, isAuthenticated } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: window.location }} />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+};
 
 const App = () => {
   return (
@@ -36,7 +56,7 @@ const App = () => {
         <ChatProvider>
           <ListingProvider>
             <AdminProvider>
-              <div className="flex flex-col min-h-screen">
+              <div className="flex flex-col min-h-screen bg-gray-50">
                 <Navbar />
                 <main className="flex-grow">
                   <Routes>
@@ -49,9 +69,16 @@ const App = () => {
                     <Route path="/seller/:id" element={<SellerProfile />} />
                     <Route path="/search" element={<Search />} />
                     <Route path="/unauthorized" element={<Unauthorized />} />
-                    <Route path="/cart" element={<Cart />} />
 
                     {/* Protected Routes */}
+                    <Route
+                      path="/cart"
+                      element={
+                        <ProtectedRoute>
+                          <Cart />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="/sell"
                       element={
@@ -98,16 +125,16 @@ const App = () => {
                       path="/admin/*"
                       element={
                         <ProtectedRoute allowedRoles={['admin']}>
-                          <AdminRoutes />
+                          <AdminDashboard />
                         </ProtectedRoute>
                       }
                     />
 
                     {/* 404 Route */}
-                    <Route
-                      path="*"
+                    <Route 
+                      path="*" 
                       element={
-                        <div className="min-h-[70vh] flex items-center justify-center">
+                        <div className="min-h-screen flex items-center justify-center">
                           <div className="text-center">
                             <h1 className="text-4xl font-bold text-gray-900 mb-4">
                               404 - Page Not Found
@@ -124,11 +151,13 @@ const App = () => {
                             </button>
                           </div>
                         </div>
-                      }
+                      } 
                     />
                   </Routes>
                 </main>
                 <Footer />
+
+                {/* Toast Notifications */}
                 <Toaster
                   position="top-right"
                   toastOptions={{

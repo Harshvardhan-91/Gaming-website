@@ -27,7 +27,7 @@ import { useChat } from "../../context/ChatContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { currentUser: user, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { notifications, unreadCount } = useNotifications();
   const { unreadMessages } = useChat();
 
