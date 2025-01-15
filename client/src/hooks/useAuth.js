@@ -1,29 +1,24 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Check authentication status on mount
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
       const response = await api.get('/auth/me');
-      if (response.data.success) {
+      if (response?.data?.user) {
         setUser(response.data.user);
       } else {
         localStorage.removeItem('token');
@@ -33,8 +28,6 @@ const useAuth = () => {
       console.error('Auth check error:', error);
       localStorage.removeItem('token');
       setUser(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -42,25 +35,36 @@ const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Attempting login:', { email });
-      const response = await api.post('/auth/login', { email, password });
-      console.log('Login response:', response.data);
+      console.log('Attempting login with:', email);
+      
+      const response = await api.post('/auth/login', {
+        email: email.trim(),
+        password: password.trim()
+      });
 
-      if (response.data.success) {
+      console.log('Login response:', response);
+
+      // If response is successful
+      if (response?.data?.token) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
         toast.success('Login successful!');
         navigate('/');
         return { success: true };
-      } else {
-        const errorMessage = response.data.error || 'Login failed';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return { success: false, error: errorMessage };
       }
+
+      // If response has an error
+      const errorMessage = response?.data?.error || 'Login failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.response?.data?.error || 'Login failed';
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.response?.data?.message || 
+        'Invalid credentials';
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -73,25 +77,31 @@ const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Attempting signup:', { email: userData.email });
-      const response = await api.post('/auth/register', userData);
-      console.log('Signup response:', response.data);
+      const response = await api.post('/auth/register', {
+        name: userData.name.trim(),
+        email: userData.email.trim(),
+        password: userData.password
+      });
 
-      if (response.data.success) {
+      if (response?.data?.token) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
         toast.success('Account created successfully!');
         navigate('/');
         return { success: true };
-      } else {
-        const errorMessage = response.data.error || 'Signup failed';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return { success: false, error: errorMessage };
       }
+
+      const errorMessage = response?.data?.error || 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+
     } catch (error) {
       console.error('Signup error:', error);
-      const errorMessage = error.response?.data?.error || 'Signup failed';
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.response?.data?.message || 
+        'Registration failed';
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -107,53 +117,6 @@ const useAuth = () => {
     navigate('/login');
   }, [navigate]);
 
-  const updateProfile = useCallback(async (userData) => {
-    setLoading(true);
-    try {
-      const response = await api.put('/auth/profile', userData);
-      if (response.data.success) {
-        setUser(response.data.user);
-        toast.success('Profile updated successfully');
-        return { success: true };
-      } else {
-        const errorMessage = response.data.error || 'Profile update failed';
-        toast.error(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Profile update failed';
-      toast.error(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const changePassword = useCallback(async (currentPassword, newPassword) => {
-    setLoading(true);
-    try {
-      const response = await api.put('/auth/change-password', {
-        currentPassword,
-        newPassword
-      });
-      
-      if (response.data.success) {
-        toast.success('Password changed successfully');
-        return { success: true };
-      } else {
-        const errorMessage = response.data.error || 'Password change failed';
-        toast.error(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Password change failed';
-      toast.error(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   return {
     user,
     loading,
@@ -161,8 +124,6 @@ const useAuth = () => {
     login,
     signup,
     logout,
-    updateProfile,
-    changePassword,
     checkAuth,
     isAuthenticated: !!user
   };
