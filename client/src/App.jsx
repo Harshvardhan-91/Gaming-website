@@ -16,7 +16,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 // Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
-import SignUp from './pages/SignUp';
+import SignUp from './pages/Signup';
 import GameListing from './pages/GameListing';
 import ListingDetails from './pages/ListingDetails';
 import CreateListing from './pages/CreateListing';
