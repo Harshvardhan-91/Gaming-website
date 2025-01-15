@@ -25,4 +25,5 @@ _site/
 *.njsproj
 *.sln
 *.sw?
+node_modules
 .env

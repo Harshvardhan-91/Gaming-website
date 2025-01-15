@@ -95,7 +95,6 @@ router.get('/', async (req, res) => {
 });
 
 // Create new listing
-// Create new listing
 router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
   try {
     // Debug logs
