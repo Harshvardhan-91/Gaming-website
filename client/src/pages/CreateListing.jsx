@@ -1,40 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Upload, Trash2, Plus, ChevronRight, 
-  AlertCircle, CheckCircle2, Image as ImageIcon 
+  AlertCircle, CheckCircle2, Image as ImageIcon,
+  Loader2
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import api from '../utils/api';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 
 const CreateListing = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     gameType: '',
     price: '',
     description: '',
     features: [''],
-    level: '',
-    rank: '',
-    accountAge: '',
-    skins: '',
-    accountDetails: {
-      username: '',
-      email: '',
-      password: ''
+    details: {
+      level: '',
+      rank: '',
+      accountAge: '',
+      skins: ''
     }
   });
 
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { state: { from: '/create-listing' } });
+    }
+  }, [user, navigate]);
+
   const gameTypes = [
     "Valorant",
-    "CS:GO",
+    "CSGO",
     "PUBG",
     "Fortnite",
     "League of Legends",
-    "Dota 2",
-    "Minecraft",
-    "Roblox",
     "Other"
   ];
 
@@ -48,6 +56,7 @@ const CreateListing = () => {
   };
 
   const removeImage = (index) => {
+    URL.revokeObjectURL(images[index].url);
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -77,45 +86,107 @@ const CreateListing = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => {
-      // Create a shallow copy of the previous state
       const newData = { ...prevData };
-      
-      // Check if the field name contains a dot (.) for nested objects
-      if (name.includes('.')) {
-        const [parent, child] = name.split('.');
-        newData[parent] = {
-          ...newData[parent],
-          [child]: value
+      if (name.startsWith('details.')) {
+        const field = name.split('.')[1];
+        newData.details = {
+          ...newData.details,
+          [field]: value
         };
       } else {
         newData[name] = value;
       }
-      
       return newData;
     });
   };
 
+  const validateForm = () => {
+    if (step === 1) {
+      if (!formData.title || formData.title.length < 10) {
+        setError('Title must be at least 10 characters long');
+        return false;
+      }
+      if (!formData.gameType) {
+        setError('Please select a game type');
+        return false;
+      }
+      if (!formData.price || formData.price <= 0) {
+        setError('Please enter a valid price');
+        return false;
+      }
+      if (!formData.description || formData.description.length < 50) {
+        setError('Description must be at least 50 characters long');
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
     if (step < 3) {
-      setStep(prev => prev + 1);
+      if (validateForm()) {
+        setStep(prev => prev + 1);
+      }
       return;
     }
-    // Here you would trim the values before submission
-    const trimmedData = {
-      ...formData,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      features: formData.features.map(f => f.trim()),
-      accountDetails: {
-        ...formData.accountDetails,
-        username: formData.accountDetails.username.trim(),
-        email: formData.accountDetails.email.trim(),
-        password: formData.accountDetails.password.trim()
+
+    if (images.length === 0) {
+      setError('Please upload at least one image');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create FormData for multipart/form-data request
+      const formDataToSend = new FormData();
+
+      // Append all form fields as a single JSON string in the 'data' field
+      const listingData = {
+        title: formData.title.trim(),
+        gameType: formData.gameType,
+        price: Number(formData.price),
+        description: formData.description.trim(),
+        features: formData.features.filter(f => f.trim()),
+        details: {
+          level: formData.details.level,
+          rank: formData.details.rank,
+          accountAge: formData.details.accountAge,
+          skins: formData.details.skins
+        }
+      };
+
+      formDataToSend.append('data', JSON.stringify(listingData));
+
+      // Append all images with unique keys
+      images.forEach((image, index) => {
+        formDataToSend.append(`image${index}`, image.file);
+      });
+
+      // Send request to create listing
+      const response = await api.post('/listings', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Navigate to the new listing
+      navigate(`/listing/${response.data.listing._id}`);
+    } catch (err) {
+      console.error('Error creating listing:', err);
+      // Check if there's a specific validation error
+      if (err.response?.data?.errors) {
+        const errorMessages = err.response.data.errors
+          .map(error => error.msg)
+          .join(', ');
+        setError(errorMessages);
+      } else {
+        setError(err.response?.data?.error || 'Error creating listing. Please try again.');
       }
-    };
-    // TODO: Handle final submission with trimmedData
-    navigate('/listing/new-listing-id');
+      setLoading(false);
+    }
   };
 
   const BasicInfo = () => (
@@ -231,8 +302,8 @@ const CreateListing = () => {
         </label>
         <input
           type="text"
-          name="level"
-          value={formData.level}
+          name="details.level"
+          value={formData.details.level}
           onChange={handleChange}
           placeholder="Enter account level"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
@@ -246,8 +317,8 @@ const CreateListing = () => {
         </label>
         <input
           type="text"
-          name="rank"
-          value={formData.rank}
+          name="details.rank"
+          value={formData.details.rank}
           onChange={handleChange}
           placeholder="Enter account rank"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
@@ -257,14 +328,14 @@ const CreateListing = () => {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Account Username
+          Account Age
         </label>
         <input
           type="text"
-          name="accountDetails.username"
-          value={formData.accountDetails.username}
+          name="details.accountAge"
+          value={formData.details.accountAge}
           onChange={handleChange}
-          placeholder="Enter account username"
+          placeholder="How old is the account?"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
@@ -272,29 +343,14 @@ const CreateListing = () => {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Account Email
+          Number of Skins
         </label>
         <input
-          type="email"
-          name="accountDetails.email"
-          value={formData.accountDetails.email}
+          type="text"
+          name="details.skins"
+          value={formData.details.skins}
           onChange={handleChange}
-          placeholder="Enter account email"
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 
-                   focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Account Password
-        </label>
-        <input
-          type="password"
-          name="accountDetails.password"
-          value={formData.accountDetails.password}
-          onChange={handleChange}
-          placeholder="Enter account password"
+          placeholder="How many skins does the account have?"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 
                    focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
@@ -346,6 +402,10 @@ const CreateListing = () => {
     </div>
   );
 
+  if (!user) {
+    return null; // Don't render anything while redirecting
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-3xl">
@@ -362,11 +422,18 @@ const CreateListing = () => {
 
         <div className="w-full bg-gray-100 h-2 rounded-full mb-8">
           <div 
-            className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full 
-                     transition-all duration-500"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full transition-all duration-500"
             style={{ width: `${(step / 3) * 100}%` }}
           />
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
           <form onSubmit={handleSubmit}>
@@ -379,20 +446,28 @@ const CreateListing = () => {
                 <button
                   type="button"
                   onClick={() => setStep(prev => prev - 1)}
+                  disabled={loading}
                   className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 
-                           rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                           rounded-xl hover:bg-gray-50 transition-colors font-medium
+                           disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Back
                 </button>
               )}
               <button
                 type="submit"
+                disabled={loading}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 
                          to-purple-600 text-white rounded-xl hover:opacity-90 
                          transition-all font-medium flex items-center justify-center 
-                         gap-2"
+                         gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {step === 3 ? (
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {step === 3 ? 'Creating...' : 'Loading...'}
+                  </>
+                ) : step === 3 ? (
                   <>
                     Create Listing
                     <CheckCircle2 className="w-5 h-5" />

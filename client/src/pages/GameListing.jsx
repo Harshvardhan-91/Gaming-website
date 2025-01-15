@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
   X,
-  Loader,
+  Loader2
 } from "lucide-react";
 import api from '../utils/api';
 import ListingCard from "../components/listings/ListingCard";
@@ -58,7 +58,9 @@ const GameListing = () => {
   // Fetch listings with current filters
   const fetchListings = async (page = 1) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      }
       
       // Construct query parameters
       const params = new URLSearchParams();
@@ -66,7 +68,7 @@ const GameListing = () => {
       if (filters.priceRange) {
         const [min, max] = filters.priceRange.split('-');
         if (min) params.append('minPrice', min);
-        if (max) params.append('maxPrice', max);
+        if (max && max !== '+') params.append('maxPrice', max);
       }
       if (filters.sortBy) {
         const sort = filters.sortBy === 'newest' ? '-createdAt' :
@@ -77,22 +79,23 @@ const GameListing = () => {
       }
       params.append('page', page);
       if (filters.search) params.append('search', filters.search);
-  
-      console.log('Fetching listings with params:', params.toString());
-      const response = await api.get(`/listings?${params.toString()}`);
-      console.log('Listings response:', response);
-  
+
+      const response = await api.get(`/listings?${params}`);
+      
       if (response?.data?.success) {
-        setListings(response.data.listings);
+        if (page === 1) {
+          setListings(response.data.listings);
+        } else {
+          setListings(prev => [...prev, ...response.data.listings]);
+        }
         setTotalPages(response.data.pages);
-        setCurrentPage(page);
+        setCurrentPage(response.data.currentPage);
       } else {
-        console.error('Failed response:', response);
-        toast.error('Failed to fetch listings');
+        throw new Error(response.data?.error || 'Failed to fetch listings');
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
-      toast.error(error.response?.data?.error || 'Error loading listings');
+      toast.error(error.response?.data?.error || error.message || 'Error loading listings');
     } finally {
       setLoading(false);
     }
@@ -136,6 +139,16 @@ const GameListing = () => {
     }
   };
 
+  // Reset filters
+  const clearFilters = () => {
+    setFilters({
+      gameType: [],
+      priceRange: '',
+      sortBy: 'newest',
+      search: ''
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -174,13 +187,13 @@ const GameListing = () => {
               </button>
             </div>
 
-            {/* Filter Toggle */}
+            {/* Filter Toggle (Mobile) */}
             <button
               onClick={() => setIsFilterOpen(true)}
-              className="bg-white p-2 rounded-lg shadow-sm text-gray-600 
+              className="lg:hidden bg-white p-2 rounded-lg shadow-sm text-gray-600 
                        hover:text-gray-800"
             >
-              <SlidersHorizontal className="w-5 h-5" />
+              <Filter className="w-5 h-5" />
             </button>
 
             {/* Sort Dropdown */}
@@ -270,12 +283,7 @@ const GameListing = () => {
 
             {/* Clear Filters */}
             <button
-              onClick={() => setFilters({
-                gameType: [],
-                priceRange: '',
-                sortBy: 'newest',
-                search: ''
-              })}
+              onClick={clearFilters}
               className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 
                        font-medium"
             >
@@ -287,7 +295,7 @@ const GameListing = () => {
           <div className="flex-1">
             {loading && listings.length === 0 ? (
               <div className="flex items-center justify-center h-64">
-                <Loader className="w-8 h-8 animate-spin text-blue-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               </div>
             ) : listings.length === 0 ? (
               <div className="text-center py-12">
@@ -334,7 +342,105 @@ const GameListing = () => {
         </div>
 
         {/* Mobile Filter Drawer */}
-        {/* ... Mobile filter section remains the same ... */}
+        {isFilterOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50">
+            <div className="absolute inset-y-0 right-0 w-full max-w-xs bg-white">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-semibold">Filters</h2>
+                  <button
+                    onClick={() => setIsFilterOpen(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="mb-6">
+                  <form onSubmit={handleSearch}>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="search"
+                        defaultValue={filters.search}
+                        placeholder="Search listings..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
+                      />
+                      <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                    </div>
+                  </form>
+                </div>
+
+                {/* Game Type */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Game Type
+                  </h3>
+                  <div className="space-y-2">
+                    {gameTypes.map((type) => (
+                      <label key={type} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={filters.gameType.includes(type)}
+                          onChange={() => toggleFilter("gameType", type)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 
+                                   focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-600">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price Range */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Price Range
+                  </h3>
+                  <div className="space-y-2">
+                    {priceRanges.map((range) => (
+                      <label key={range.value} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="priceRange"
+                          value={range.value}
+                          checked={filters.priceRange === range.value}
+                          onChange={(e) =>
+                            toggleFilter("priceRange", e.target.value)
+                          }
+                          className="w-4 h-4 border-gray-300 text-blue-600 
+                                   focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-600">{range.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                <div className="mt-auto">
+                  <button
+                    onClick={clearFilters}
+                    className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 
+                             font-medium"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+
+                {/* Apply Filters Button */}
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 
+                           text-white rounded-xl mt-4"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

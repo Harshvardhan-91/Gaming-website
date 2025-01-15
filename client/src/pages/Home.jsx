@@ -1,74 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, Star, Clock, Gamepad2, Shield, Users, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import api from '../utils/api';
+import ListingGrid from '../components/listings/ListingGrid';
 
 const Home = () => {
   const [activeCategory, setActiveCategory] = useState('FPS Games');
-  
-  // Mock featured games data
-  const featuredGames = [
-    {
-      id: 1,
-      title: "Valorant Account",
-      price: 149.99,
-      image: "https://media.wired.com/photos/5ea0840cb0490300086261e3/master/pass/Cul-Reveal_ReactorA_VALORANT.jpg",
-      rating: 4.8,
-      level: 150,
-      skins: 45,
-      timeLeft: "2 days"
-    },
-    {
-      id: 2,
-      title: "PUBG Elite Pass",
-      price: 89.99,
-      image: "https://i.pinimg.com/originals/e2/20/d7/e220d75c93384db915220c92daf07dad.jpg",
-      rating: 4.5,
-      level: 89,
-      skins: 28,
-      timeLeft: "5 hours"
-    },
-    {
-      id: 3,
-      title: "CS:GO Inventory",
-      price: 299.99,
-      image: "https://pbs.twimg.com/media/D3uLTNJW4AEf5os.jpg:large",
-      rating: 5.0,
-      level: 210,
-      skins: 76,
-      timeLeft: "1 day"
-    },
-  ];
+  const [featuredListings, setFeaturedListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFeaturedListings();
+  }, []);
+
+  const fetchFeaturedListings = async () => {
+    try {
+      // Fetch only verified listings with high ratings
+      const response = await api.get('/listings', {
+        params: {
+          verified: true,
+          sort: '-rating',
+          limit: 3
+        }
+      });
+      setFeaturedListings(response.data.listings);
+    } catch (error) {
+      console.error('Error fetching featured listings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     {
       name: "FPS Games",
       count: 1234,
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQu80opCs99-wc2zBiUkvQdF8yGsX3MspUwyQ&s"
+      image: "/api/placeholder/400/400" // Using placeholder images
     },
     {
       name: "Battle Royale",
       count: 856,
-      image: "https://cdn.mos.cms.futurecdn.net/cRFFW6JNXqEtkBA3P2U68m.jpg"
+      image: "/api/placeholder/400/400"
     },
     {
       name: "MOBA",
       count: 654,
-      image: "https://imageio.forbes.com/specials-images/imageserve/65fb05c9fa323af23f667c73/0x0.jpg?format=jpg&height=900&width=1600&fit=bounds"
+      image: "/api/placeholder/400/400"
     },
     {
       name: "RPG",
       count: 987,
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxQgM-3JqmZFZCUo00flP3F-8PR7h2eCs2xQ&s"
+      image: "/api/placeholder/400/400"
     },
     {
       name: "Sports",
       count: 432,
-      image: "https://www.gettyimages.in/gi-resources/images/HomepageCurationTilesUK/2024_12_DECEMBER/premierleague.jpg"
+      image: "/api/placeholder/400/400"
     },
     {
       name: "Strategy",
       count: 345,
-      image: "https://waywardstrategy.com/wp-content/uploads/2015/09/aoe2hd.png?w=1200"
+      image: "/api/placeholder/400/400"
     }
   ];
 
@@ -99,27 +91,26 @@ const Home = () => {
         </div>
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight animate-fade-in-up">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
               Your One-Stop Destination for Gaming Accounts
             </h1>
-            <p className="text-lg md:text-xl mb-8 text-blue-100 animate-fade-in-up delay-100">
+            <p className="text-lg md:text-xl mb-8 text-blue-100">
               Buy and sell game accounts safely and securely. 
               Join thousands of gamers in our trusted marketplace.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up delay-200">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/browse"
                 className="px-8 py-3 bg-white text-blue-600 rounded-xl 
-                         font-semibold hover:bg-blue-50 transition-all duration-200 
-                         transform hover:scale-105"
+                         font-semibold hover:bg-blue-50 transition-all duration-200"
               >
                 Browse Accounts
               </Link>
               <Link
-                to="/sell"
+                to="/create-listing"
                 className="px-8 py-3 bg-transparent border-2 border-white 
                          rounded-xl font-semibold hover:bg-white/10 
-                         transition-all duration-200 transform hover:scale-105"
+                         transition-all duration-200"
               >
                 Start Selling
               </Link>
@@ -157,56 +148,63 @@ const Home = () => {
           <h2 className="text-2xl font-bold">Featured Listings</h2>
           <Link 
             to="/browse" 
-            className="text-blue-600 hover:text-blue-700 flex items-center gap-1 
-                     transition-colors duration-200"
+            className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
             View all
             <ChevronRight className="w-5 h-5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredGames.map((game) => (
-            <div 
-              key={game.id}
-              className="bg-white rounded-2xl shadow-sm hover:shadow-md 
-                       transition-all duration-200 transform hover:scale-[1.02]"
-            >
-              <img 
-                src={game.image} 
-                alt={game.title}
-                className="w-full h-48 object-cover rounded-t-2xl"
-              />
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold">{game.title}</h3>
-                  <span className="text-2xl font-bold text-blue-600">
-                    ${game.price}
-                  </span>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-500">Loading featured listings...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredListings.map(listing => (
+              <Link 
+                key={listing._id}
+                to={`/listing/${listing._id}`}
+                className="bg-white rounded-2xl shadow-sm hover:shadow-md 
+                         transition-all duration-200"
+              >
+                <img 
+                  src={listing.images[0]} 
+                  alt={listing.title}
+                  className="w-full h-48 object-cover rounded-t-2xl"
+                />
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">{listing.title}</h3>
+                    <span className="text-2xl font-bold text-blue-600">
+                      ${listing.price}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                      <span>{listing.seller.rating || 'New'}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Gamepad2 className="w-4 h-4" />
+                      <span>Level {listing.details.level}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <button className="w-full py-2.5 bg-gradient-to-r from-blue-600 
+                                   to-purple-600 text-white rounded-xl 
+                                   hover:opacity-90 transition-all duration-200">
+                    View Details
+                  </button>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span>{game.rating}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Gamepad2 className="w-4 h-4" />
-                    <span>Level {game.level}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{game.timeLeft}</span>
-                  </div>
-                </div>
-                <button className="w-full py-2.5 bg-gradient-to-r from-blue-600 
-                                 to-purple-600 text-white rounded-xl 
-                                 hover:opacity-90 transition-all duration-200">
-                  View Details
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Categories Section */}
@@ -219,7 +217,7 @@ const Home = () => {
                 key={category.name}
                 onClick={() => setActiveCategory(category.name)}
                 className={`relative group cursor-pointer rounded-xl overflow-hidden 
-                          transition-all duration-200 transform hover:scale-105
+                          transition-all duration-200
                           ${activeCategory === category.name ? 'ring-2 ring-blue-500' : ''}`}
               >
                 <img 
@@ -235,6 +233,12 @@ const Home = () => {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* All Listings Section */}
+      <section className="py-16 container mx-auto px-4">
+        <h2 className="text-2xl font-bold mb-8">All Listings</h2>
+        <ListingGrid />
       </section>
 
       {/* Trust & Safety Section */}

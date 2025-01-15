@@ -39,7 +39,8 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: window.location }} />;
+    // Save the attempted URL for redirect after login
+    return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
@@ -53,8 +54,8 @@ const App = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <ChatProvider>
-          <ListingProvider>
+        <ListingProvider>
+          <ChatProvider>
             <AdminProvider>
               <div className="flex flex-col min-h-screen bg-gray-50">
                 <Navbar />
@@ -80,7 +81,7 @@ const App = () => {
                       }
                     />
                     <Route
-                      path="/sell"
+                      path="/create-listing"
                       element={
                         <ProtectedRoute>
                           <CreateListing />
@@ -104,13 +105,16 @@ const App = () => {
                       }
                     />
                     <Route
-                      path="/chat/*"
+                      path="/chat"
                       element={
                         <ProtectedRoute>
                           <Chat />
                         </ProtectedRoute>
                       }
-                    />
+                    >
+                      <Route path=":sellerId" element={<Chat />} />
+                      <Route path=":sellerId/:listingId" element={<Chat />} />
+                    </Route>
                     <Route
                       path="/notifications"
                       element={
@@ -118,6 +122,12 @@ const App = () => {
                           <Notifications />
                         </ProtectedRoute>
                       }
+                    />
+
+                    {/* Redirect /sell to /create-listing */}
+                    <Route 
+                      path="/sell" 
+                      element={<Navigate to="/create-listing" replace />} 
                     />
 
                     {/* Admin Routes */}
@@ -180,11 +190,12 @@ const App = () => {
                 />
               </div>
             </AdminProvider>
-          </ListingProvider>
-        </ChatProvider>
+          </ChatProvider>
+        </ListingProvider>
       </NotificationProvider>
     </AuthProvider>
   );
 };
 
 export default App;
+
