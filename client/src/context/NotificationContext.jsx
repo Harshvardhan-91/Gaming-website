@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 const NotificationContext = createContext(null);
 
 export const NotificationProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();  // Changed from user to currentUser
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -21,7 +21,7 @@ export const NotificationProvider = ({ children }) => {
     },
     {
       id: 2,
-      type: 'offer',
+      type: 'listing',
       title: 'New Offer',
       content: 'Someone made an offer on your Valorant account',
       time: '1 hour ago',
@@ -30,7 +30,7 @@ export const NotificationProvider = ({ children }) => {
     },
     {
       id: 3,
-      type: 'system',
+      type: 'security',
       title: 'Account Verified',
       content: 'Your account has been successfully verified',
       time: '1 day ago',
@@ -40,7 +40,7 @@ export const NotificationProvider = ({ children }) => {
   ];
 
   useEffect(() => {
-    if (user) {
+    if (currentUser) {
       // In real app, fetch notifications from API
       setNotifications(mockNotifications);
       updateUnreadCount(mockNotifications);
@@ -48,7 +48,7 @@ export const NotificationProvider = ({ children }) => {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [user]);
+  }, [currentUser]);
 
   const updateUnreadCount = (notifs) => {
     const count = notifs.filter(n => !n.read).length;
@@ -86,32 +86,6 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(prev => prev.filter(notif => notif.id !== id));
     updateUnreadCount(notifications.filter(notif => notif.id !== id));
   };
-
-  // Real-time notification simulation
-  useEffect(() => {
-    if (!user) return;
-
-    const simulateNewNotification = () => {
-      const types = ['message', 'offer', 'system'];
-      const randomType = types[Math.floor(Math.random() * types.length)];
-      
-      const newNotification = {
-        type: randomType,
-        title: randomType === 'message' ? 'New Message' : 
-              randomType === 'offer' ? 'New Offer' : 'System Update',
-        content: `This is a simulated ${randomType} notification`,
-        link: randomType === 'message' ? '/chat' : 
-              randomType === 'offer' ? '/offers' : '/profile'
-      };
-
-      addNotification(newNotification);
-    };
-
-    // Simulate real-time notifications every 30 seconds
-    const interval = setInterval(simulateNewNotification, 30000);
-
-    return () => clearInterval(interval);
-  }, [user]);
 
   const value = {
     notifications,

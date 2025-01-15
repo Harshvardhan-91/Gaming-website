@@ -1,11 +1,11 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ChatProvider } from './context/ChatContext';
 import { ListingProvider } from './context/ListingContext';
 import { AdminProvider } from './context/AdminContext';
-import { ToastContainer } from './components/ui/Toast';
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -129,7 +129,26 @@ const App = () => {
                   </Routes>
                 </main>
                 <Footer />
-                <ToastContainer />
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    success: {
+                      duration: 3000,
+                      style: {
+                        background: '#10B981',
+                        color: 'white',
+                      },
+                    },
+                    error: {
+                      duration: 4000,
+                      style: {
+                        background: '#EF4444',
+                        color: 'white',
+                      },
+                    },
+                  }}
+                />
               </div>
             </AdminProvider>
           </ListingProvider>

@@ -27,7 +27,7 @@ import { useChat } from "../../context/ChatContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { currentUser: user, logout } = useAuth();
   const { notifications, unreadCount } = useNotifications();
   const { unreadMessages } = useChat();
 
@@ -45,7 +45,13 @@ const Navbar = () => {
     "Looking for Minecraft worlds?",
     "Browse Fortnite accounts...",
   ];
-
+  // Reset states when user changes
+useEffect(() => {
+  if (!user) {
+    closeAllDropdowns();
+    setIsMobileMenuOpen(false);
+  }
+}, [user]);
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % searchPlaceholders.length);

@@ -1,97 +1,7 @@
-// context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 
 const AuthContext = createContext(null);
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const response = await axios.get(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUser(response.data);
-      }
-    } catch (err) {
-      localStorage.removeItem('token');
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const login = async (email, password) => {
-    try {
-      setError(null);
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password
-      });
-
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Login failed';
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
-  const signup = async (userData) => {
-    try {
-      setError(null);
-      const response = await axios.post(`${API_URL}/auth/register`, userData);
-      
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Registration failed';
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    navigate('/login');
-  };
-
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    signup,
-    logout,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin'
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
-};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -99,6 +9,138 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await api.auth.verifyToken();
+      if (response.success) {
+        setCurrentUser(response.user);
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('token');
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Auth status check error:', error);
+      localStorage.removeItem('token');
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signup = async (formData) => {
+    try {
+      console.log('Sending registration data:', formData);
+      const response = await api.auth.register(formData);
+      console.log('Registration response:', response);
+
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        setCurrentUser(response.user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: response.error || 'Registration failed'
+      };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return {
+        success: false,
+        error: error.error || 'Registration failed'
+      };
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await api.auth.login({ email, password });
+
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        setCurrentUser(response.user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: response.error || 'Invalid credentials'
+      };
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: error.error || 'Login failed'
+      };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
+
+  const updateProfile = async (userData) => {
+    try {
+      const response = await api.put('/auth/profile', userData);
+
+      if (response.success) {
+        setCurrentUser(response.user);
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        error: response.error || 'Profile update failed'
+      };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return {
+        success: false,
+        error: error.error || 'Profile update failed'
+      };
+    }
+  };
+
+  const value = {
+    currentUser,
+    isAuthenticated,
+    loading,
+    signup,
+    login,
+    logout,
+    updateProfile,
+    checkAuthStatus
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

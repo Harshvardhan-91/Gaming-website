@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -14,30 +15,66 @@ const SignUp = () => {
     confirmPassword: ''
   });
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      toast.error('Name is required');
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      toast.error('Email is required');
+      return false;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
+    if (!validateForm()) {
       return;
     }
 
+    setLoading(true);
     try {
-      const result = await signup(formData);
+      const result = await signup({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password
+      });
+
       if (result.success) {
-        navigate('/'); // Redirect to home after successful signup
+        toast.success('Account created successfully!');
+        navigate('/');
       } else {
-        setError(result.error || 'Registration failed');
+        setError(result.error);
+        toast.error(result.error);
       }
     } catch (error) {
-      setError('Something went wrong. Please try again.');
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -49,6 +86,8 @@ const SignUp = () => {
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   return (
@@ -132,6 +171,7 @@ const SignUp = () => {
                            outline-none transition-all"
                   placeholder="Create a password"
                   required
+                  minLength={6}
                 />
                 <Lock className="w-5 h-5 absolute left-4 top-3.5 text-gray-400" />
                 <button
@@ -155,7 +195,7 @@ const SignUp = () => {
               </label>
               <div className="relative">
                 <input
-                  type={isPasswordVisible ? "text" : "password"}
+                  type={isConfirmPasswordVisible ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -164,8 +204,20 @@ const SignUp = () => {
                            outline-none transition-all"
                   placeholder="Confirm your password"
                   required
+                  minLength={6}
                 />
                 <Lock className="w-5 h-5 absolute left-4 top-3.5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
+                >
+                  {isConfirmPasswordVisible ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -199,18 +251,6 @@ const SignUp = () => {
                   Sign in
                 </Link>
               </p>
-            </div>
-
-            {/* Terms and Privacy */}
-            <div className="text-center text-sm text-gray-500">
-              By signing up, you agree to our{' '}
-              <Link to="/terms" className="text-blue-600 hover:underline">
-                Terms of Service
-              </Link>
-              {' '}and{' '}
-              <Link to="/privacy" className="text-blue-600 hover:underline">
-                Privacy Policy
-              </Link>
             </div>
           </form>
         </div>

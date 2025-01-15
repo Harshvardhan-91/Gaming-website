@@ -1,32 +1,69 @@
-// hooks/useAuth.js
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data.success) {
+        setUser(response.data.user);
+      } else {
+        localStorage.removeItem('token');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const login = useCallback(async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API call
-      const response = await mockLoginAPI(email, password);
-      
-      if (response.success) {
-        setUser(response.user);
-        localStorage.setItem('auth_token', response.token);
-        navigate('/dashboard');
+      console.log('Attempting login:', { email });
+      const response = await api.post('/auth/login', { email, password });
+      console.log('Login response:', response.data);
+
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        toast.success('Login successful!');
+        navigate('/');
         return { success: true };
       } else {
-        throw new Error(response.message || 'Login failed');
+        const errorMessage = response.data.error || 'Login failed';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return { success: false, error: errorMessage };
       }
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -36,117 +73,86 @@ const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API call
-      const response = await mockSignupAPI(userData);
-      
-      if (response.success) {
-        setUser(response.user);
-        localStorage.setItem('auth_token', response.token);
-        navigate('/dashboard');
+      console.log('Attempting signup:', { email: userData.email });
+      const response = await api.post('/auth/register', userData);
+      console.log('Signup response:', response.data);
+
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        toast.success('Account created successfully!');
+        navigate('/');
         return { success: true };
       } else {
-        throw new Error(response.message || 'Signup failed');
+        const errorMessage = response.data.error || 'Signup failed';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        return { success: false, error: errorMessage };
       }
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    } catch (error) {
+      console.error('Signup error:', error);
+      const errorMessage = error.response?.data?.error || 'Signup failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   }, [navigate]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token');
     setUser(null);
+    toast.success('Logged out successfully');
     navigate('/login');
   }, [navigate]);
 
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      try {
-        // TODO: Replace with actual API call
-        const response = await mockCheckAuthAPI(token);
-        if (response.success) {
-          setUser(response.user);
-        } else {
-          logout();
-        }
-      } catch (err) {
-        logout();
+  const updateProfile = useCallback(async (userData) => {
+    setLoading(true);
+    try {
+      const response = await api.put('/auth/profile', userData);
+      if (response.data.success) {
+        setUser(response.data.user);
+        toast.success('Profile updated successfully');
+        return { success: true };
+      } else {
+        const errorMessage = response.data.error || 'Profile update failed';
+        toast.error(errorMessage);
+        return { success: false, error: errorMessage };
       }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Profile update failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
-  }, [logout]);
+  }, []);
 
-  // Mock API functions - Replace these with actual API calls
-  const mockLoginAPI = async (email, password) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock validation
-    if (email === 'admin@example.com' && password === 'admin123') {
-      return {
-        success: true,
-        user: {
-          id: '1',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin'
-        },
-        token: 'mock_token_123'
-      };
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    setLoading(true);
+    try {
+      const response = await api.put('/auth/change-password', {
+        currentPassword,
+        newPassword
+      });
+      
+      if (response.data.success) {
+        toast.success('Password changed successfully');
+        return { success: true };
+      } else {
+        const errorMessage = response.data.error || 'Password change failed';
+        toast.error(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Password change failed';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
-    
-    if (email === 'user@example.com' && password === 'user123') {
-      return {
-        success: true,
-        user: {
-          id: '2',
-          email: 'user@example.com',
-          name: 'Regular User',
-          role: 'user'
-        },
-        token: 'mock_token_456'
-      };
-    }
-
-    return {
-      success: false,
-      message: 'Invalid email or password'
-    };
-  };
-
-  const mockSignupAPI = async (userData) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      success: true,
-      user: {
-        id: Date.now().toString(),
-        ...userData,
-        role: 'user'
-      },
-      token: `mock_token_${Date.now()}`
-    };
-  };
-
-  const mockCheckAuthAPI = async (token) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (token) {
-      return {
-        success: true,
-        user: {
-          id: '1',
-          email: 'user@example.com',
-          name: 'Test User',
-          role: 'user'
-        }
-      };
-    }
-    
-    return { success: false };
-  };
+  }, []);
 
   return {
     user,
@@ -155,6 +161,8 @@ const useAuth = () => {
     login,
     signup,
     logout,
+    updateProfile,
+    changePassword,
     checkAuth,
     isAuthenticated: !!user
   };

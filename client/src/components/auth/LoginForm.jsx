@@ -1,12 +1,12 @@
-// components/auth/LoginForm.jsx
-
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
+import toast from 'react-hot-toast';
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading, error } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -16,19 +16,29 @@ const LoginForm = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
+  // Clear validation errors when route changes
+  useEffect(() => {
+    setValidationErrors({});
+    setFormData({ email: '', password: '' });
+  }, [location.pathname]);
+
   const validateForm = () => {
     const errors = {};
     
     if (!formData.email) {
       errors.email = 'Email is required';
+      toast.error('Email is required');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email';
+      toast.error('Please enter a valid email');
     }
     
     if (!formData.password) {
       errors.password = 'Password is required';
+      toast.error('Password is required');
     } else if (formData.password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
+      toast.error('Password must be at least 6 characters');
     }
 
     setValidationErrors(errors);
@@ -39,7 +49,7 @@ const LoginForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value.trim()
     }));
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
@@ -57,18 +67,34 @@ const LoginForm = () => {
       return;
     }
 
-    const result = await login(formData.email, formData.password);
-    if (result.success) {
-      // Login successful - navigation is handled in the useAuth hook
-      console.log('Login successful');
+    try {
+      const result = await login(formData.email, formData.password);
+      if (result.success) {
+        toast.success('Login successful!');
+        // Navigate to the page they were trying to access, or home
+        const redirectTo = location.state?.from?.pathname || '/';
+        navigate(redirectTo);
+      } else {
+        toast.error(result.error || 'Login failed');
+      }
+    } catch (err) {
+      toast.error(err.message || 'An error occurred during login');
     }
   };
 
-  // Test account info for demo purposes
+  // Demo accounts
   const demoAccounts = [
     { type: 'Admin', email: 'admin@example.com', password: 'admin123' },
     { type: 'User', email: 'user@example.com', password: 'user123' }
   ];
+
+  const setDemoAccount = (account) => {
+    setFormData({
+      email: account.email,
+      password: account.password
+    });
+    setValidationErrors({});
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col items-center justify-center p-4">
@@ -189,7 +215,8 @@ const LoginForm = () => {
             <h3 className="font-medium text-blue-800 mb-2">Test Accounts</h3>
             <div className="space-y-2 text-sm">
               {demoAccounts.map((account, index) => (
-                <div key={index} className="flex flex-col text-gray-600">
+                <div key={index} className="flex flex-col text-gray-600 p-2 hover:bg-blue-100 rounded-lg cursor-pointer"
+                     onClick={() => setDemoAccount(account)}>
                   <span className="font-medium text-blue-600">{account.type} Account:</span>
                   <span>Email: {account.email}</span>
                   <span>Password: {account.password}</span>

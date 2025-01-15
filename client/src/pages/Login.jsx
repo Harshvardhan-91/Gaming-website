@@ -1,8 +1,8 @@
-// pages/Login.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import  useAuth  from '../hooks/useAuth';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,22 +17,48 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const validateForm = () => {
+    if (!formData.email) {
+      toast.error('Email is required');
+      return false;
+    }
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error('Please enter a valid email');
+      return false;
+    }
+    if (!formData.password) {
+      toast.error('Password is required');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
     setError('');
 
-    const result = await login(formData.email, formData.password);
-    
-    if (result.success) {
-      // Navigate to the intended page or dashboard
-      const from = location.state?.from?.pathname || '/';
-      navigate(from);
-    } else {
-      setError(result.error || 'Login failed');
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        toast.success('Login successful!');
+        // Navigate to the intended page or dashboard
+        const from = location.state?.from?.pathname || '/';
+        navigate(from);
+      } else {
+        setError(result.error || 'Login failed');
+        toast.error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Demo account info
