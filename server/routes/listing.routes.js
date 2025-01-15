@@ -95,17 +95,19 @@ router.get('/', async (req, res) => {
 });
 
 // Create new listing
-router.post('/', [
-  auth,
-  upload.array('images', 6),
-  listingValidation
-], async (req, res) => {
+// Create new listing
+router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    // Debug logs
+    console.log('Request body:', req.body);
+    console.log('Files:', req.files);
+    console.log('User ID:', req.user.userId);
+
+    // Validate required fields
+    if (!req.body.title || !req.body.gameType || !req.body.price || !req.body.description) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        error: 'Missing required fields'
       });
     }
 
@@ -116,14 +118,38 @@ router.post('/', [
       });
     }
 
+    // Create image paths
     const images = req.files.map(file => `/uploads/listings/${file.filename}`);
 
-    const listing = new Listing({
-      ...req.body,
+    // Parse features if present
+    let features = [];
+    try {
+      features = req.body.features ? JSON.parse(req.body.features) : [];
+    } catch (e) {
+      console.error('Error parsing features:', e);
+      features = [];
+    }
+
+    // Create listing object
+    const listingData = {
+      title: req.body.title,
+      gameType: req.body.gameType,
+      price: Number(req.body.price),
+      description: req.body.description,
+      features: features,
+      details: {
+        level: req.body['details.level'] || '',
+        rank: req.body['details.rank'] || '',
+        accountAge: req.body['details.accountAge'] || '',
+        skins: req.body['details.skins'] || ''
+      },
       seller: req.user.userId,
       images
-    });
+    };
 
+    console.log('Creating listing with data:', listingData);
+
+    const listing = new Listing(listingData);
     await listing.save();
 
     // Add listing to user's listings
@@ -133,19 +159,30 @@ router.post('/', [
 
     const populatedListing = await listing.populate('seller', 'name avatar rating');
 
+    console.log('Successfully created listing:', populatedListing);
+
     res.status(201).json({
       success: true,
       listing: populatedListing
     });
   } catch (error) {
     console.error('Create listing error:', error);
+    // Clean up uploaded files if save fails
+    if (req.files) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(path.join(__dirname, '..', 'uploads', 'listings', file.filename));
+        } catch (e) {
+          console.error('Error deleting file:', e);
+        }
+      });
+    }
     res.status(500).json({ 
       success: false, 
-      error: 'Error creating listing' 
+      error: error.message || 'Error creating listing' 
     });
   }
 });
-
 // Get single listing
 router.get('/:id', async (req, res) => {
   try {
