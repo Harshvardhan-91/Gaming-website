@@ -75,11 +75,11 @@ const ListingGrid = () => {
     >
       <div className="aspect-[4/3] relative">
         <img
-          src={listing.images[0]}
+          src={listing.images?.[0] || '/placeholder-image.jpg'}
           alt={listing.title}
           className="w-full h-full object-cover"
         />
-        {listing.seller.verified && (
+        {listing.seller?.verified && (
           <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 
                         rounded-full">
             <Check className="w-4 h-4" />
@@ -96,7 +96,7 @@ const ListingGrid = () => {
             ${listing.price}
           </span>
         </div>
-
+  
         <div className="flex items-center text-sm text-gray-500 mb-2">
           <span className="bg-gray-100 px-2 py-1 rounded">
             {listing.gameType}
@@ -104,17 +104,18 @@ const ListingGrid = () => {
           <span className="mx-2">•</span>
           <div className="flex items-center">
             <Star className="w-4 h-4 text-yellow-400 mr-1" />
-            {listing.seller.rating.toFixed(1)}
+            {/* Add null checking for seller rating */}
+            {listing.seller?.rating ? listing.seller.rating.toFixed(1) : 'N/A'}
           </div>
         </div>
-
+  
         <div className="flex items-center text-sm text-gray-500">
           <img
-            src={listing.seller.avatar}
-            alt={listing.seller.name}
+            src={listing.seller?.avatar || '/default-avatar.jpg'}
+            alt={listing.seller?.name || 'Seller'}
             className="w-5 h-5 rounded-full mr-2"
           />
-          <span>{listing.seller.name}</span>
+          <span>{listing.seller?.name || 'Unknown Seller'}</span>
         </div>
       </div>
     </div>

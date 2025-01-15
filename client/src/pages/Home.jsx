@@ -35,32 +35,32 @@ const Home = () => {
     {
       name: "FPS Games",
       count: 1234,
-      image: "/api/placeholder/400/400" // Using placeholder images
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQu80opCs99-wc2zBiUkvQdF8yGsX3MspUwyQ&s" // Using placeholder images
     },
     {
       name: "Battle Royale",
       count: 856,
-      image: "/api/placeholder/400/400"
+      image: "https://cdn.mos.cms.futurecdn.net/cRFFW6JNXqEtkBA3P2U68m.jpg"
     },
     {
       name: "MOBA",
       count: 654,
-      image: "/api/placeholder/400/400"
+      image: "https://imageio.forbes.com/specials-images/imageserve/65fb05c9fa323af23f667c73/0x0.jpg?format=jpg&height=900&width=1600&fit=bounds"
     },
     {
       name: "RPG",
       count: 987,
-      image: "/api/placeholder/400/400"
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxQgM-3JqmZFZCUo00flP3F-8PR7h2eCs2xQ&s"
     },
     {
       name: "Sports",
       count: 432,
-      image: "/api/placeholder/400/400"
+      image: "https://www.gettyimages.in/gi-resources/images/HomepageCurationTilesUK/2024_12_DECEMBER/premierleague.jpg"
     },
     {
       name: "Strategy",
       count: 345,
-      image: "/api/placeholder/400/400"
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSF2zdZNsDQk2Z-u5b5TaNcEui16Sh5f86zFg&s"
     }
   ];
 
