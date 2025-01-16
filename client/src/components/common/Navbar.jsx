@@ -24,6 +24,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { useChat } from "../../context/ChatContext";
+import ProfileAvatar from './ProfileAvatar';
 
 const Navbar = () => {
   const navigate = useNavigate();
