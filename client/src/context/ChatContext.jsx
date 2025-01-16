@@ -1,128 +1,225 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import api from '../utils/api';
+import { toast } from 'react-hot-toast';
 
 const ChatContext = createContext(null);
 
 export const ChatProvider = ({ children }) => {
-  const { currentUser } = useAuth();  // Changed from user to currentUser
+  const { user } = useAuth();
+  const [socket, setSocket] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [unreadMessages, setUnreadMessages] = useState(0);  // Changed name to be consistent with Navbar
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [loading, setLoading] = useState(true);
 
+  // Initialize socket connection
   useEffect(() => {
-    if (currentUser) {
+    if (user) {
+      const token = localStorage.getItem('token');
+      const newSocket = io(import.meta.env.VITE_API_URL, {
+        auth: { token }
+      });
+
+      newSocket.on('connect', () => {
+        console.log('Socket connected');
+        newSocket.emit('set_online_status', true);
+      });
+
+      newSocket.on('new_message', handleNewMessage);
+      newSocket.on('messages_read', handleMessagesRead);
+      newSocket.on('new_chat', handleNewChat);
+      newSocket.on('user_status_changed', handleUserStatusChange);
+
+      setSocket(newSocket);
+
+      return () => {
+        if (newSocket) {
+          newSocket.emit('set_online_status', false);
+          newSocket.disconnect();
+        }
+      };
+    }
+  }, [user]);
+
+  // Fetch conversations when user changes
+  useEffect(() => {
+    if (user) {
       fetchConversations();
     } else {
-      // Reset state when user logs out
-      setConversations([]);
-      setActiveConversation(null);
-      setMessages([]);
-      setUnreadMessages(0);
+      resetState();
     }
-  }, [currentUser]);
+  }, [user]);
 
-  useEffect(() => {
-    if (activeConversation) {
-      fetchMessages(activeConversation.id);
-    }
-  }, [activeConversation]);
+  const resetState = () => {
+    setConversations([]);
+    setActiveConversation(null);
+    setUnreadMessages(0);
+  };
 
   const fetchConversations = async () => {
-    // Mock data for demonstration
-    const mockConversations = [
-      {
-        id: 1,
-        otherUser: {
-          id: 2,
-          name: "John Doe",
-          avatar: "/api/placeholder/40/40",
-          online: true
-        },
-        lastMessage: {
-          content: "Hey, is the account still available?",
-          timestamp: new Date().toISOString(),
-          unread: true
-        },
-        listing: {
-          id: 1,
-          title: "Valorant Account - Diamond Rank",
-          price: 149.99,
-          image: "/api/placeholder/60/60"
+    try {
+      setLoading(true);
+      const response = await api.get('/chats');
+      setConversations(response.data);
+      calculateUnreadMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      toast.error('Failed to load conversations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNewMessage = ({ chatId, message }) => {
+    setConversations(prev => prev.map(chat => {
+      if (chat._id === chatId) {
+        const newChat = {
+          ...chat,
+          messages: [...chat.messages, message],
+          lastMessage: message
+        };
+
+        // Update unread count if not active conversation
+        if (chatId !== activeConversation?._id) {
+          newChat.unreadCount = (chat.unreadCount || 0) + 1;
         }
-      }
-    ];
 
-    setConversations(mockConversations);
-    calculateUnreadMessages(mockConversations);
+        return newChat;
+      }
+      return chat;
+    }));
+
+    // Show notification if message is not from current user
+    if (message.sender !== user?._id && (!activeConversation || activeConversation._id !== chatId)) {
+      toast.custom((t) => (
+        <div className="bg-white rounded-lg shadow-lg p-4 flex items-start gap-3">
+          <img
+            src={message.senderAvatar || '/api/placeholder/40/40'}
+            alt="Sender"
+            className="w-10 h-10 rounded-full"
+          />
+          <div className="flex-1">
+            <p className="font-medium">{message.senderName}</p>
+            <p className="text-sm text-gray-600 line-clamp-2">{message.content}</p>
+          </div>
+        </div>
+      ));
+    }
   };
 
-  const fetchMessages = async (conversationId) => {
-    // Mock messages data
-    const mockMessages = [
-      {
-        id: 1,
-        senderId: currentUser?.id,
-        content: "Hello, I'm interested in your account",
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        read: true
-      },
-      {
-        id: 2,
-        senderId: 2, // other user
-        content: "Sure, it's still available. Would you like more details?",
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-        read: false
-      }
-    ];
-
-    setMessages(mockMessages);
+  const handleMessagesRead = ({ chatId, userId }) => {
+    if (userId !== user?._id) {
+      setConversations(prev => prev.map(chat => {
+        if (chat._id === chatId) {
+          return {
+            ...chat,
+            messages: chat.messages.map(msg => ({
+              ...msg,
+              read: true
+            }))
+          };
+        }
+        return chat;
+      }));
+    }
   };
 
-  const calculateUnreadMessages = (convs) => {
-    const count = convs.reduce((acc, conv) => 
-      acc + (conv.lastMessage?.unread ? 1 : 0), 0
-    );
+  const handleNewChat = (chat) => {
+    setConversations(prev => [chat, ...prev]);
+  };
+
+  const handleUserStatusChange = ({ userId, online }) => {
+    setConversations(prev => prev.map(chat => {
+      const otherUser = chat.participants.find(p => p._id !== user?._id);
+      if (otherUser?._id === userId) {
+        return {
+          ...chat,
+          participants: chat.participants.map(p => 
+            p._id === userId ? { ...p, online } : p
+          )
+        };
+      }
+      return chat;
+    }));
+  };
+
+  const calculateUnreadMessages = (chats) => {
+    const count = chats.reduce((acc, chat) => acc + (chat.unreadCount || 0), 0);
     setUnreadMessages(count);
   };
 
-  const sendMessage = async (content, conversationId) => {
-    const newMessage = {
-      id: Date.now(),
-      senderId: currentUser?.id,
-      content,
-      timestamp: new Date().toISOString(),
-      read: true
-    };
+  const sendMessage = async (chatId, content, attachments = []) => {
+    try {
+      const response = await api.post(`/chats/${chatId}/messages`, {
+        content,
+        attachments
+      });
 
-    setMessages(prev => [...prev, newMessage]);
+      // Update local state
+      handleNewMessage({
+        chatId,
+        message: response.data.messages[response.data.messages.length - 1]
+      });
 
-    // Update conversation
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === conversationId
-          ? {
-              ...conv,
-              lastMessage: {
-                content,
-                timestamp: new Date().toISOString(),
-                unread: false
-              }
-            }
-          : conv
-      )
-    );
+      return response.data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+      throw error;
+    }
+  };
 
-    return newMessage;
+  const markAsRead = async (chatId) => {
+    try {
+      await api.put(`/chats/${chatId}/read`);
+      
+      setConversations(prev => prev.map(chat => {
+        if (chat._id === chatId) {
+          return {
+            ...chat,
+            unreadCount: 0,
+            messages: chat.messages.map(msg => ({
+              ...msg,
+              read: true
+            }))
+          };
+        }
+        return chat;
+      }));
+
+      calculateUnreadMessages(conversations);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const createChat = async (participantId, listingId) => {
+    try {
+      const response = await api.post('/chats', {
+        participantId,
+        listingId
+      });
+
+      setConversations(prev => [response.data, ...prev]);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      toast.error('Failed to create chat');
+      throw error;
+    }
   };
 
   const value = {
     conversations,
     activeConversation,
     setActiveConversation,
-    messages,
-    unreadMessages, // This matches the Navbar expectation
-    sendMessage
+    unreadMessages,
+    loading,
+    sendMessage,
+    markAsRead,
+    createChat
   };
 
   return (

@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const Chat = require('../models/Chat');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -190,6 +191,60 @@ router.put('/:id', [auth], async (req, res) => {
   }
 });
 
+// Get all listings with filters
+router.get('/', async (req, res) => {
+  try {
+    const { 
+      gameType, 
+      minPrice, 
+      maxPrice, 
+      sort = '-createdAt',
+      verified,
+      seller,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const query = {};
+    
+    if (gameType) query.gameType = gameType;
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+    if (verified === 'true') query.verified = true;
+    if (seller) query.seller = seller;
+
+    console.log('Query:', query); // Debug log
+
+    const [listings, total] = await Promise.all([
+      Listing.find(query)
+        .populate('seller', 'name avatar rating verified')
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+      Listing.countDocuments(query)
+    ]);
+
+    console.log('Found listings:', listings.length); // Debug log
+
+    res.json({
+      success: true,
+      listings,
+      total,
+      pages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('Get listings error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error fetching listings' 
+    });
+  }
+});
+
+
 // Toggle like listing
 router.post('/:id/like', auth, async (req, res) => {
   try {
@@ -224,5 +279,162 @@ router.post('/:id/like', auth, async (req, res) => {
     });
   }
 });
+
+// Get user's listings
+router.get('/my-listings', auth, async (req, res) => {
+  try {
+    const listings = await Listing.find({ seller: req.user.userId })
+      .populate('seller', 'name avatar rating verified')
+      .sort('-createdAt');
+
+    res.json({
+      success: true,
+      listings
+    });
+  } catch (error) {
+    console.error('Get my listings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching your listings'
+    });
+  }
+});
+
+router.patch('/:id/status', auth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const listing = await Listing.findById(req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Listing not found'
+      });
+    }
+
+    // Check ownership or admin role
+    if (listing.seller.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    // Validate status
+    if (!['active', 'sold', 'suspended'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status'
+      });
+    }
+
+    listing.status = status;
+    await listing.save();
+
+    res.json({
+      success: true,
+      listing
+    });
+  } catch (error) {
+    console.error('Update listing status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error updating listing status'
+    });
+  }
+});
+
+// Delete listing
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Listing not found'
+      });
+    }
+
+    // Check ownership or admin role
+    if (listing.seller.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    // Delete images from Cloudinary
+    for (const imageUrl of listing.images) {
+      try {
+        const publicId = imageUrl.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(`game-listings/${publicId}`);
+      } catch (e) {
+        console.error('Error deleting image from Cloudinary:', e);
+      }
+    }
+
+    // Remove listing from user's listings array
+    await User.findByIdAndUpdate(listing.seller, {
+      $pull: { listings: listing._id }
+    });
+
+    // Delete the listing
+    await listing.deleteOne();
+
+    res.json({
+      success: true,
+      message: 'Listing deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete listing error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error deleting listing'
+    });
+  }
+});
+
+// Get listing statistics
+router.get('/:id/stats', auth, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Listing not found'
+      });
+    }
+
+    // Check ownership
+    if (listing.seller.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    const stats = {
+      views: listing.views,
+      likes: listing.likes.length,
+      inquiries: await Chat.countDocuments({ listing: listing._id }),
+      status: listing.status,
+      createdAt: listing.createdAt
+    };
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Get listing stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching listing statistics'
+    });
+  }
+});
+
 
 module.exports = router;

@@ -29,6 +29,7 @@ import SellerProfile from './pages/SellerProfile';
 import Search from './pages/SearchPage';
 import Unauthorized from './pages/Unauthorized';
 import Cart from './pages/Cart';
+import HowitWorks from './pages/HowitWorks';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -70,6 +71,7 @@ const App = () => {
                     <Route path="/seller/:id" element={<SellerProfile />} />
                     <Route path="/search" element={<Search />} />
                     <Route path="/unauthorized" element={<Unauthorized />} />
+                    <Route path = "/how-it-works" element = {<HowitWorks />} />
 
                     {/* Protected Routes */}
                     <Route

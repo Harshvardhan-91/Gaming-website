@@ -114,6 +114,35 @@ export const AuthProvider = ({ children }) => {
     toast.success('Logged out successfully');
   };
 
+  const updateAvatar = async (file) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await api.post('/auth/upload-avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data?.success) {
+        setUser(response.data.user);
+        toast.success('Profile picture updated successfully!');
+        return { success: true };
+      }
+
+      throw new Error(response.data?.error || 'Failed to update profile picture');
+    } catch (error) {
+      console.error('Update avatar error:', error);
+      toast.error(error.message || 'Failed to update profile picture');
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const value = {
     user,
     isAuthenticated,
@@ -121,6 +150,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     login,
     logout,
+    updateAvatar,
     checkAuthStatus
   };
 

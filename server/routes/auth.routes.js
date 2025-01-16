@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { upload } = require('../utils/cloudinary');
 
 // Register validation middleware
 const registerValidation = [
@@ -303,6 +304,55 @@ router.put('/change-password', [
     res.status(500).json({
       success: false,
       error: 'Failed to change password'
+    });
+  }
+});
+
+
+// Upload avatar
+router.post('/upload-avatar', [auth, upload.single('avatar')], async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    // Get the old avatar url to delete from cloudinary later
+    const user = await User.findById(req.user.userId);
+    const oldAvatar = user.avatar;
+
+    // Update user with new avatar url
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.userId,
+      { 
+        $set: { 
+          avatar: req.file.path  // Cloudinary provides the URL in req.file.path
+        } 
+      },
+      { new: true }
+    ).select('-password');
+
+    // If there was an old avatar, delete it from cloudinary
+    if (oldAvatar) {
+      try {
+        const publicId = oldAvatar.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(`user-avatars/${publicId}`);
+      } catch (error) {
+        console.error('Error deleting old avatar:', error);
+      }
+    }
+
+    res.json({
+      success: true,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload avatar'
     });
   }
 });
