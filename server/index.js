@@ -13,6 +13,7 @@ dotenv.config();
 
 const app = express();
 
+
 // CORS Configuration
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -86,13 +87,8 @@ const server = app.listen(PORT, () => {
 });
 
 // Socket.io setup
-const io = socket(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+const io = setupSocket(server);
+app.set('io', io); 
 
 // Socket middleware for authentication
 io.use((socket, next) => {
