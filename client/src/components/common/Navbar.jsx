@@ -212,22 +212,22 @@ useEffect(() => {
       {user && (
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <img
-                src={user.avatar || "/api/placeholder/48/48"}
-                alt="Profile"
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              {user.role === "admin" && (
-                <span
-                  className="absolute -bottom-1 -right-1 bg-purple-600 
-                             text-white text-xs rounded-full w-4 h-4 flex 
-                             items-center justify-center"
-                >
-                  A
-                </span>
-              )}
-            </div>
+          <div className="relative">
+                <ProfileAvatar
+                  size="md"
+                  showStatus={true}
+                  className="w-12 h-12"
+                />
+                {user.role === "admin" && (
+                  <span
+                    className="absolute -bottom-1 -right-1 bg-purple-600 
+                               text-white text-xs rounded-full w-4 h-4 flex 
+                               items-center justify-center"
+                  >
+                    A
+                  </span>
+                )}
+              </div>
             <div className="overflow-hidden">
               <p className="font-semibold truncate">{user.name || "User"}</p>
               <p className="text-sm text-gray-500 truncate">{user.email}</p>
@@ -503,11 +503,13 @@ useEffect(() => {
                       className="flex items-center gap-2 p-1 hover:bg-gray-100 
                                rounded-full transition-colors"
                     >
-                      <img
-                        src={user.avatar || "/api/placeholder/32/32"}
-                        alt="Profile"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
+                      <div className="w-8 h-8">
+                        <ProfileAvatar
+                          size="sm"
+                          showStatus={true}
+                          className="w-full h-full"
+                        />
+                      </div>
                       <ChevronDown className="w-4 h-4 text-gray-600" />
                     </button>
                     {isProfileDropdownOpen && <ProfileDropdown />}
