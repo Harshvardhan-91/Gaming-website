@@ -4,14 +4,23 @@ const Listing = require('../models/Listing');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const multer = require('multer');
-const path = require('path');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: 'uploads/listings/',
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Cloudinary storage
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'game-listings',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
   }
 });
 
@@ -19,90 +28,21 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
+    if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only images are allowed'));
+      cb(new Error('Not an image! Please upload only images.'), false);
     }
-  }
-});
-
-// Validation middleware
-const listingValidation = [
-  body('title').trim().notEmpty().withMessage('Title is required')
-    .isLength({ min: 10 }).withMessage('Title must be at least 10 characters'),
-  body('gameType').notEmpty().withMessage('Game type is required')
-    .isIn(['Valorant', 'CSGO', 'PUBG', 'Fortnite', 'League of Legends', 'Other'])
-    .withMessage('Invalid game type'),
-  body('price').isNumeric().withMessage('Price must be a number')
-    .isFloat({ min: 0 }).withMessage('Price must be positive'),
-  body('description').trim().notEmpty().withMessage('Description is required')
-    .isLength({ min: 50 }).withMessage('Description must be at least 50 characters'),
-  body('features').isArray().withMessage('Features must be an array'),
-  body('details.level').optional().isNumeric(),
-  body('details.rank').optional().trim(),
-  body('details.accountAge').optional().trim(),
-  body('details.skins').optional().trim()
-];
-
-// Get all listings with filters
-router.get('/', async (req, res) => {
-  try {
-    const { 
-      gameType, 
-      minPrice, 
-      maxPrice, 
-      sort = '-createdAt',
-      verified,
-      page = 1,
-      limit = 10
-    } = req.query;
-
-    const query = { status: 'active' };
-    if (gameType) query.gameType = gameType;
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = minPrice;
-      if (maxPrice) query.price.$lte = maxPrice;
-    }
-    if (verified) query.verified = verified === 'true';
-
-    const [listings, total] = await Promise.all([
-      Listing.find(query)
-        .populate('seller', 'name avatar rating')
-        .sort(sort)
-        .skip((page - 1) * limit)
-        .limit(limit),
-      Listing.countDocuments(query)
-    ]);
-
-    res.json({
-      success: true,
-      listings,
-      total,
-      pages: Math.ceil(total / limit)
-    });
-  } catch (error) {
-    console.error('Get listings error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Error fetching listings' 
-    });
   }
 });
 
 // Create new listing
 router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
   try {
-    // Debug logs
     console.log('Request body:', req.body);
     console.log('Files:', req.files);
     console.log('User ID:', req.user.userId);
 
-    // Validate required fields
     if (!req.body.title || !req.body.gameType || !req.body.price || !req.body.description) {
       return res.status(400).json({
         success: false,
@@ -117,8 +57,8 @@ router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
       });
     }
 
-    // Create image paths
-    const images = req.files.map(file => `/uploads/listings/${file.filename}`);
+    // Get Cloudinary URLs from uploaded files
+    const images = req.files.map(file => file.path);
 
     // Parse features if present
     let features = [];
@@ -129,7 +69,6 @@ router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
       features = [];
     }
 
-    // Create listing object
     const listingData = {
       title: req.body.title,
       gameType: req.body.gameType,
@@ -151,14 +90,11 @@ router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
     const listing = new Listing(listingData);
     await listing.save();
 
-    // Add listing to user's listings
     await User.findByIdAndUpdate(req.user.userId, {
       $push: { listings: listing._id }
     });
 
     const populatedListing = await listing.populate('seller', 'name avatar rating');
-
-    console.log('Successfully created listing:', populatedListing);
 
     res.status(201).json({
       success: true,
@@ -166,15 +102,16 @@ router.post('/', [auth, upload.array('images', 6)], async (req, res) => {
     });
   } catch (error) {
     console.error('Create listing error:', error);
-    // Clean up uploaded files if save fails
+    // If there's an error, we might want to delete the uploaded images from Cloudinary
     if (req.files) {
-      req.files.forEach(file => {
+      for (const file of req.files) {
         try {
-          fs.unlinkSync(path.join(__dirname, '..', 'uploads', 'listings', file.filename));
+          const publicId = file.filename; // This might need adjustment based on your Cloudinary setup
+          await cloudinary.uploader.destroy(publicId);
         } catch (e) {
-          console.error('Error deleting file:', e);
+          console.error('Error deleting file from Cloudinary:', e);
         }
-      });
+      }
     }
     res.status(500).json({ 
       success: false, 
