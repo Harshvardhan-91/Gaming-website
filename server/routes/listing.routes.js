@@ -436,5 +436,38 @@ router.get('/:id/stats', auth, async (req, res) => {
   }
 });
 
+router.post('/:id/report', auth, async (req, res) => {
+  try {
+    const { reason, description } = req.body;
+    const listing = await Listing.findById(req.params.id);
 
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    const report = new Report({
+      type: 'listing',
+      reportedItem: listing._id,
+      reporter: req.user.userId,
+      reason,
+      description
+    });
+
+    await report.save();
+
+    // Notify admins (through socket or notification system)
+    const io = req.app.get('io');
+    io.to('admin').emit('new_report', {
+      type: 'listing',
+      itemId: listing._id
+    });
+
+    res.json({
+      success: true,
+      message: 'Report submitted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error submitting report' });
+  }
+});
 module.exports = router;

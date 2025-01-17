@@ -1,14 +1,15 @@
-// server/routes/admin.routes.js
 const router = require('express').Router();
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const auth = require('../middleware/auth');
+const adminController = require('../controllers/admin.controller');
+const isAdmin = require('../middleware/isAdmin');
 
-// Admin middleware to check if user is admin
+// Admin middleware
 const isAdmin = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.userId);
-    if (user.role !== 'admin') {
+    if (user?.role !== 'admin') {
       return res.status(403).json({ error: 'Not authorized as admin' });
     }
     next();
@@ -16,6 +17,37 @@ const isAdmin = async (req, res, next) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// Dashboard Stats
+router.get('/dashboard/stats', [auth, isAdmin], adminController.getDashboardStats);
+
+// User Management
+router.get('/users', [auth, isAdmin], adminController.getAllUsers);
+router.patch('/users/:id', [auth, isAdmin], adminController.updateUser);
+router.delete('/users/:id', [auth, isAdmin], adminController.deleteUser);
+
+// Report Management
+router.get('/reports', [auth, isAdmin], adminController.getAllReports);
+router.patch('/reports/:id', [auth, isAdmin], adminController.updateReport);
+
+// Listing Management
+router.get('/listings', [auth, isAdmin], adminController.getAllListings);
+router.delete('/listings/:id', [auth, isAdmin], adminController.deleteListing);
+
+// Get admin dashboard stats
+router.get('/stats', [auth, isAdmin], async (req, res) => {
+  try {
+    const stats = {
+      users: await User.countDocuments(),
+      listings: await Listing.countDocuments(),
+      activeListings: await Listing.countDocuments({ status: 'active' }),
+      reportedListings: await Listing.countDocuments({ status: 'reported' })
+    };
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching stats' });
+  }
+});
 
 // Get all users
 router.get('/users', [auth, isAdmin], async (req, res) => {
@@ -28,21 +60,54 @@ router.get('/users', [auth, isAdmin], async (req, res) => {
 });
 
 // Delete user
-router.delete('/users/:userId', [auth, isAdmin], async (req, res) => {
+router.delete('/users/:id', [auth, isAdmin], async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.userId);
-    // Also delete user's listings
-    await Listing.deleteMany({ seller: req.params.userId });
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete user's listings
+    await Listing.deleteMany({ seller: user._id });
+    
+    // Delete user
+    await user.deleteOne();
+    
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Error deleting user' });
   }
 });
 
-// Get all listings
+// Update user (ban/unban, change role)
+router.patch('/users/:id', [auth, isAdmin], async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.status) updates.status = req.body.status;
+    if (req.body.role) updates.role = req.body.role;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: updates },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating user' });
+  }
+});
+
+// Get all listings for admin
 router.get('/listings', [auth, isAdmin], async (req, res) => {
   try {
-    const listings = await Listing.find().populate('seller', 'name email');
+    const listings = await Listing.find()
+      .populate('seller', 'name email')
+      .sort('-createdAt');
     res.json(listings);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching listings' });
@@ -50,13 +115,25 @@ router.get('/listings', [auth, isAdmin], async (req, res) => {
 });
 
 // Delete listing
-router.delete('/listings/:listingId', [auth, isAdmin], async (req, res) => {
+router.delete('/listings/:id', [auth, isAdmin], async (req, res) => {
   try {
-    await Listing.findByIdAndDelete(req.params.listingId);
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    // Remove listing from user's listings array
+    await User.findByIdAndUpdate(listing.seller, {
+      $pull: { listings: listing._id }
+    });
+
+    await listing.deleteOne();
     res.json({ message: 'Listing deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Error deleting listing' });
   }
 });
+
+
 
 module.exports = router;

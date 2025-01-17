@@ -28,7 +28,7 @@ import ProfileAvatar from './ProfileAvatar';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout,  isAuthenticated } = useAuth();
   const { notifications, unreadCount } = useNotifications();
   const { unreadMessages } = useChat();
 
@@ -71,6 +71,9 @@ useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  useEffect(() => {
+    console.log('Auth state changed:', { user, isAuthenticated });
+  }, [user, isAuthenticated]);
 
   const handleSearch = (e) => {
     e.preventDefault();

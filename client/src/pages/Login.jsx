@@ -36,21 +36,21 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     setLoading(true);
     setError('');
-
+  
     try {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        toast.success('Login successful!');
-        // Navigate to the intended page or dashboard
-        const from = location.state?.from?.pathname || '/';
-        navigate(from);
+        // Important: Let the navigation happen after state updates
+        setTimeout(() => {
+          const from = location.state?.from?.pathname || '/dashboard';
+          navigate(from, { replace: true });
+        }, 100);
       } else {
         setError(result.error || 'Login failed');
-        toast.error(result.error || 'Login failed');
       }
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Login failed';

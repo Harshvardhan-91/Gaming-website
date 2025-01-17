@@ -8,11 +8,15 @@ const authRoutes = require('./routes/auth.routes');
 const chatRoutes = require('./routes/chat.routes');
 const listingRoutes = require('./routes/listing.routes');
 const profileRoutes = require('./routes/profile.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 dotenv.config();
 
 const app = express();
 
+
+
+app.use('/api/admin', adminRoutes);
 
 // CORS Configuration
 app.use(cors({

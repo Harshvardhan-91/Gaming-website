@@ -5,6 +5,7 @@ import {
   Shield, User, CheckCircle, X 
 } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
+import { toast } from 'react-hot-toast';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -12,6 +13,40 @@ const UserManagement = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/admin/users');
+      setUsers(response.data.users);
+    } catch (error) {
+      toast.error('Failed to fetch users');
+    }
+  };
+
+  const handleStatusChange = async (userId, newStatus) => {
+    try {
+      await api.patch(`/admin/users/${userId}`, { status: newStatus });
+      toast.success('User status updated');
+      fetchUsers(); // Refresh list
+    } catch (error) {
+      toast.error('Failed to update user status');
+    }
+  };
+
+  // Add filtered users logic
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    return matchesSearch && matchesRole;
+  });
+
+
+
 
   // Edit User Modal
   const EditUserModal = ({ user, onClose, onSave }) => {

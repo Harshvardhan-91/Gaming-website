@@ -144,9 +144,20 @@ const setupSocket = (server) => {
         online: false
       });
     });
-  });
+      // Admin notification room
+      if (socket.user?.role === 'admin') {
+        socket.join('admin-notifications');
+      }
+      // Report notification
+      socket.on('report_created', (report) => {
+        io.to('admin-notifications').emit('new_report', report);
+      });
 
+      // User notification
+      socket.on('user_action_required', (data) => {
+        io.to('admin-notifications').emit('user_requires_action', data);
+      });
+  });
   return io;
 };
-
 module.exports = setupSocket;

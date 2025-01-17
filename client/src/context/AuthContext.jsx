@@ -57,15 +57,15 @@ export const AuthProvider = ({ children }) => {
         email: email.trim(),
         password: password.trim()
       });
-
+  
       if (response.data?.success) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
-        setIsAuthenticated(true);
+        setIsAuthenticated(true);  // Important: This needs to be set
         toast.success('Login successful!');
         return { success: true };
       }
-
+  
       const errorMessage = response.data?.error || 'Invalid credentials';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
