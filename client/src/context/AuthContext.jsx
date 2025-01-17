@@ -21,8 +21,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        setUser(null);
+        setIsAuthenticated(false);
         setLoading(false);
-        return;
+        return false;
       }
 
       const response = await api.get('/auth/me');
@@ -30,18 +32,22 @@ export const AuthProvider = ({ children }) => {
       if (response.data?.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
+        setLoading(false);
+        return true;
       } else {
         localStorage.removeItem('token');
         setUser(null);
         setIsAuthenticated(false);
+        setLoading(false);
+        return false;
       }
     } catch (error) {
       console.error('Auth status check error:', error);
       localStorage.removeItem('token');
       setUser(null);
       setIsAuthenticated(false);
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 
@@ -60,10 +66,23 @@ export const AuthProvider = ({ children }) => {
   
       if (response.data?.success) {
         localStorage.setItem('token', response.data.token);
-        setUser(response.data.user);
-        setIsAuthenticated(true);  // Important: This needs to be set
+        
+        // Update state synchronously
+        await Promise.all([
+          new Promise(resolve => {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+            resolve();
+          })
+        ]);
+
+        // Verify the auth state was updated
+        if (!user || !isAuthenticated) {
+          await checkAuthStatus();
+        }
+        
         toast.success('Login successful!');
-        return { success: true };
+        return { success: true, user: response.data.user };
       }
   
       const errorMessage = response.data?.error || 'Invalid credentials';
@@ -89,10 +108,18 @@ export const AuthProvider = ({ children }) => {
 
       if (response.data?.success) {
         localStorage.setItem('token', response.data.token);
-        setUser(response.data.user);
-        setIsAuthenticated(true);
+        
+        // Update state synchronously
+        await Promise.all([
+          new Promise(resolve => {
+            setUser(response.data.user);
+            setIsAuthenticated(true);
+            resolve();
+          })
+        ]);
+        
         toast.success('Account created successfully!');
-        return { success: true };
+        return { success: true, user: response.data.user };
       }
 
       const errorMessage = response.data?.error || 'Registration failed';
@@ -107,11 +134,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsAuthenticated(false);
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try {
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
+      toast.success('Logged out successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed');
+      return { success: false, error: 'Logout failed' };
+    }
   };
 
   const updateAvatar = async (file) => {
@@ -129,7 +163,7 @@ export const AuthProvider = ({ children }) => {
       if (response.data?.success) {
         setUser(response.data.user);
         toast.success('Profile picture updated successfully!');
-        return { success: true };
+        return { success: true, user: response.data.user };
       }
 
       throw new Error(response.data?.error || 'Failed to update profile picture');
@@ -141,7 +175,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-
 
   const value = {
     user,

@@ -44,11 +44,10 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Important: Let the navigation happen after state updates
-        setTimeout(() => {
-          const from = location.state?.from?.pathname || '/dashboard';
-          navigate(from, { replace: true });
-        }, 100);
+        // Wait for auth state to update completely
+        await new Promise(resolve => setTimeout(resolve, 0));
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
       } else {
         setError(result.error || 'Login failed');
       }

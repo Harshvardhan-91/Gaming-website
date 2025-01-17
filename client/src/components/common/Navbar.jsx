@@ -46,13 +46,18 @@ const Navbar = () => {
     "Looking for Minecraft worlds?",
     "Browse Fortnite accounts...",
   ];
-  // Reset states when user changes
+// Reset states when user changes
 useEffect(() => {
-  if (!user) {
-    closeAllDropdowns();
-    setIsMobileMenuOpen(false);
+  closeAllDropdowns();
+  setIsMobileMenuOpen(false);
+}, [user, isAuthenticated]);
+
+// Add effect for auth state changes
+useEffect(() => {
+  if (isAuthenticated && !user) {
+    checkAuthStatus && checkAuthStatus();
   }
-}, [user]);
+}, [isAuthenticated, user, checkAuthStatus]);
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % searchPlaceholders.length);

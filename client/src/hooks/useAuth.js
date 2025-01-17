@@ -52,24 +52,19 @@ const useAuth = () => {
         email: email.trim(),
         password: password.trim()
       });
-
+  
       if (response.data?.success && response.data?.token) {
         localStorage.setItem('token', response.data.token);
         setUser(response.data.user);
         toast.success('Login successful!');
-
-        // Navigate to the intended page or home
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
-        
         return { success: true };
       }
-
+  
       const errorMessage = response.data?.error || 'Login failed';
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
-
+  
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage = error.response?.data?.error || 'Invalid credentials';
@@ -79,8 +74,7 @@ const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, location]);
-
+  }, []);
   const signup = useCallback(async (userData) => {
     setLoading(true);
     setError(null);

@@ -167,15 +167,6 @@ const App = () => {
                       element={<Navigate to="/create-listing" replace />}
                     />
 
-                    {/* Admin Routes */}
-                    <Route
-                      path="/admin/*"
-                      element={
-                        <ProtectedRoute allowedRoles={["admin"]}>
-                          <AdminDashboard />
-                        </ProtectedRoute>
-                      }
-                    />
 
                     {/* 404 Route */}
                     <Route
