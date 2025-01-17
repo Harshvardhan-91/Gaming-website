@@ -5,18 +5,7 @@ const auth = require('../middleware/auth');
 const adminController = require('../controllers/admin.controller');
 const isAdmin = require('../middleware/isAdmin');
 
-// Admin middleware
-const isAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.userId);
-    if (user?.role !== 'admin') {
-      return res.status(403).json({ error: 'Not authorized as admin' });
-    }
-    next();
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-};
+
 
 // Dashboard Stats
 router.get('/dashboard/stats', [auth, isAdmin], adminController.getDashboardStats);
