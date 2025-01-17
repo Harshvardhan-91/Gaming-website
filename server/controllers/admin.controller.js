@@ -1,4 +1,3 @@
-// server/controllers/admin.controller.js
 const User = require('../models/User');
 const Listing = require('../models/Listing');
 const Report = require('../models/Report');
@@ -95,6 +94,35 @@ const adminController = {
     }
   },
 
+  deleteUser: async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Delete user's listings
+      await Listing.deleteMany({ seller: user._id });
+      
+      // Delete user
+      await user.deleteOne();
+      
+      res.json({
+        success: true,
+        message: 'User deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete user error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error deleting user'
+      });
+    }
+  },
+
   // Report Management
   getAllReports: async (req, res) => {
     try {
@@ -174,6 +202,35 @@ const adminController = {
       res.status(500).json({
         success: false,
         error: 'Error fetching listings'
+      });
+    }
+  },
+
+  deleteListing: async (req, res) => {
+    try {
+      const listing = await Listing.findById(req.params.id);
+      if (!listing) {
+        return res.status(404).json({
+          success: false,
+          error: 'Listing not found'
+        });
+      }
+
+      // Remove listing from user's listings array
+      await User.findByIdAndUpdate(listing.seller, {
+        $pull: { listings: listing._id }
+      });
+
+      await listing.deleteOne();
+      res.json({
+        success: true,
+        message: 'Listing deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete listing error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error deleting listing'
       });
     }
   }

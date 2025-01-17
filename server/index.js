@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const socket = require('socket.io');
+const { setupSocket } = require('./socket')
 const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const chatRoutes = require('./routes/chat.routes');
@@ -91,7 +91,13 @@ const server = app.listen(PORT, () => {
 });
 
 // Socket.io setup
-const io = setupSocket(server);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 app.set('io', io); 
 
 // Socket middleware for authentication
@@ -100,17 +106,28 @@ io.use((socket, next) => {
   if (!token) {
     return next(new Error('Authentication error'));
   }
-  // You could verify the token here if needed
-  next();
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
 });
 
-// Handle socket connections
+// Socket connection handling
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
-
+  
   // Join personal room
-  socket.join(`user_${socket.handshake.auth.userId}`);
+  socket.join(`user_${socket.user?.userId}`);
+  
+  // Admin room
+  if (socket.user?.role === 'admin') {
+    socket.join('admin-room');
+  }
 
+  // Handle various events
   socket.on('join_room', (roomId) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room ${roomId}`);
@@ -127,16 +144,25 @@ io.on('connection', (socket) => {
 
   socket.on('typing', (data) => {
     socket.to(data.roomId).emit('user_typing', {
-      userId: socket.handshake.auth.userId,
+      userId: socket.user?.userId,
       typing: true
     });
   });
 
   socket.on('stop_typing', (data) => {
     socket.to(data.roomId).emit('user_typing', {
-      userId: socket.handshake.auth.userId,
+      userId: socket.user?.userId,
       typing: false
     });
+  });
+
+  // Admin notifications
+  socket.on('report_created', (report) => {
+    io.to('admin-room').emit('new_report', report);
+  });
+
+  socket.on('user_action_required', (data) => {
+    io.to('admin-room').emit('user_requires_action', data);
   });
 
   socket.on('disconnect', () => {
